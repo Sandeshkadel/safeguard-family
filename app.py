@@ -4,7 +4,7 @@ SafeGuard Family - Enhanced Backend with Full Parent Controls
 Includes extension protection, data sync, and admin features
 """
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -14,8 +14,8 @@ import os
 
 # Initialize Flask
 app_dir = os.path.dirname(os.path.abspath(__file__))
-template_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'templates')
-app = Flask(__name__, template_folder=template_dir)
+dashboard_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'chrome-extension')
+app = Flask(__name__)
 app.config['SECRET_KEY'] = 'safeguard-family-secret-2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///safeguard.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -234,7 +234,12 @@ def health():
 @app.route('/', methods=['GET'])
 def index():
     """Serve parent dashboard on root"""
-    return render_template('dashboard.html')
+    return send_from_directory(dashboard_dir, 'dashboard.html')
+
+@app.route('/assets/<path:filename>', methods=['GET'])
+def dashboard_assets(filename):
+    """Serve dashboard static assets"""
+    return send_from_directory(dashboard_dir, filename)
 
 @app.route('/api', methods=['GET'])
 def api_root():
@@ -309,7 +314,7 @@ def bad_request(error):
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
     """Serve parent dashboard"""
-    return render_template('dashboard.html')
+    return send_from_directory(dashboard_dir, 'dashboard.html')
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
