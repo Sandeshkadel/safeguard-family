@@ -15,12 +15,14 @@ import os
 # Initialize Flask
 app_dir = os.path.dirname(os.path.abspath(__file__))
 dashboard_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'chrome-extension')
-instance_dir = os.path.join('/tmp', 'instance')
+instance_dir = os.path.join(app_dir, 'instance')
 os.makedirs(instance_dir, exist_ok=True)
 
 database_url = os.environ.get('database_url', '').strip()
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
+if not database_url:
+    database_url = f'sqlite:///{os.path.join(instance_dir, "safeguard.db")}'
 
 app = Flask(
     __name__,
@@ -29,7 +31,7 @@ app = Flask(
     static_url_path='/assets'
 )
 app.config['SECRET_KEY'] = 'safeguard-family-secret-2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:////tmp/safeguard.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JSON_SORT_KEYS'] = False
 
@@ -899,14 +901,24 @@ if __name__ == '__main__':
         db.create_all()
         print("✅ Database tables created")
     
-    print("\n🚀 SafeGuard Backend Server Starting...")
-    print("=" * 70)
-    print("📋 Server: http://192.168.1.75:3000")
-    print("📊 Dashboard: http://192.168.1.75:3000/dashboard")
-    print("🔧 API: http://192.168.1.75:3000/api")
-    print("\n🌐 Access from ANY device on your network:")
-    print("   http://192.168.1.75:3000/dashboard")
-    print("=" * 70)
-    print("\nPress Ctrl+C to stop the server\n")
+    print("\n" + "="*70)
+    print("🚀 SafeGuard Backend Server Starting...")
+    print("="*70)
+    print("\n📱 Local Access (same device):")
+    print("   🔗 Dashboard: http://localhost:5000")
+    print("   🔗 API: http://localhost:5000/api")
+    print("\n🌐 Network Access (from other devices):")
+    print("   Replace 'localhost' with your computer IP address")
+    print("   Example: http://192.168.1.X:5000")
+    print("\n💾 Database: instance/safeguard.db (local file)")
+    print("="*70)
+    print("\n⌨️  Press Ctrl+C to stop the server\n")
+    
+    app.run(
+        host='0.0.0.0',
+        port=5000,
+        debug=True,
+        use_reloader=True
+    )
     
     app.run(debug=True, host='0.0.0.0', port=3000, use_reloader=False)
