@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeGuard Family - Help</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+      background: #f7fafc;
+      color: #2d3748;
+      padding: 24px;
+    }
+    .card {
+      max-width: 840px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+    h1 { margin-bottom: 8px; }
+    h2 { margin-top: 16px; margin-bottom: 8px; font-size: 18px; }
+    .note { color: #718096; font-size: 14px; margin-bottom: 10px; }
+    .list { margin-left: 18px; line-height: 1.7; }
+    .btn { display: inline-block; margin-top: 12px; padding: 10px 14px; border-radius: 8px; background: #667eea; color: white; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🛡️ SafeGuard Family - Help</h1>
+    <p class="note">Local-only mode. No web server or API keys required.</p>
+
+    <h2>Enable Incognito Mode</h2>
+    <ul class="list">
+      <li>Open Chrome extensions page.</li>
+      <li>Find SafeGuard Family.</li>
+      <li>Turn on "Allow in incognito".</li>
+    </ul>
+    <a class="btn" href="chrome://extensions/?id=" id="openExtensions">Open Extensions</a>
+
+    <h2>Open Parent Dashboard</h2>
+    <ul class="list">
+      <li>Go to <strong>Parent Login</strong> and sign in.</li>
+      <li>Use the same ID/email and password from setup.</li>
+    </ul>
+
+    <h2>Remove the Extension</h2>
+    <ul class="list">
+      <li>Open Chrome extensions page.</li>
+      <li>Click "Remove" on SafeGuard Family.</li>
+    </ul>
+  </div>
+
+  <script>
+    const link = document.getElementById('openExtensions');
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: 'chrome://extensions/?id=' + chrome.runtime.id });
+    });
+  </script>
+</body>
+</html>
