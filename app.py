@@ -18,7 +18,7 @@ dashboard_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'chrome-ext
 instance_dir = os.path.join('/tmp', 'instance')
 os.makedirs(instance_dir, exist_ok=True)
 
-database_url = os.environ.get('DATABASE_URL', '').strip()
+database_url = os.environ.get('database_url', '').strip()
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
