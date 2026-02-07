@@ -15,9 +15,11 @@ import os
 # Initialize Flask
 app_dir = os.path.dirname(os.path.abspath(__file__))
 dashboard_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'chrome-extension')
-app = Flask(__name__)
+instance_dir = os.path.join('/tmp', 'instance')
+os.makedirs(instance_dir, exist_ok=True)
+app = Flask(__name__, instance_path=instance_dir)
 app.config['SECRET_KEY'] = 'safeguard-family-secret-2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///safeguard.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/safeguard.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JSON_SORT_KEYS'] = False
 
