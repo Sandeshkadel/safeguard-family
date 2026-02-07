@@ -17,9 +17,19 @@ app_dir = os.path.dirname(os.path.abspath(__file__))
 dashboard_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'chrome-extension')
 instance_dir = os.path.join('/tmp', 'instance')
 os.makedirs(instance_dir, exist_ok=True)
-app = Flask(__name__, instance_path=instance_dir)
+
+database_url = os.environ.get('DATABASE_URL', '').strip()
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app = Flask(
+    __name__,
+    instance_path=instance_dir,
+    static_folder=dashboard_dir,
+    static_url_path='/assets'
+)
 app.config['SECRET_KEY'] = 'safeguard-family-secret-2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/safeguard.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:////tmp/safeguard.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JSON_SORT_KEYS'] = False
 
