@@ -13,7 +13,9 @@ import uuid
 import os
 
 # Initialize Flask
-app = Flask(__name__, template_folder='templates')
+app_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'templates')
+app = Flask(__name__, template_folder=template_dir)
 app.config['SECRET_KEY'] = 'safeguard-family-secret-2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///safeguard.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -232,7 +234,11 @@ def health():
 @app.route('/', methods=['GET'])
 def index():
     """Serve parent dashboard on root"""
-    return render_template('dashboard.html')root endpoint"""
+    return render_template('dashboard.html')
+
+@app.route('/api', methods=['GET'])
+def api_root():
+    """API root endpoint"""
     return jsonify({
         'status': 'ok',
         'message': 'SafeGuard Family API v1.0',
