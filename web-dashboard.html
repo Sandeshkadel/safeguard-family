@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeGuard Family - Web Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon { font-size: 32px; }
+    
+    .brand-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-danger {
+      background: #e53e3e;
+      color: white;
+    }
+
+    .login-box {
+      background: white;
+      max-width: 450px;
+      margin: 100px auto;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      color: #2d3748;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #2d3748;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .stat-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #718096;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .section {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .section h2 {
+      color: #2d3748;
+      margin-bottom: 16px;
+    }
+
+    .table {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      background: #f7fafc;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-danger {
+      background: #fed7d7;
+      color: #c53030;
+    }
+
+    .badge-success {
+      background: #c6f6d5;
+      color: #2f855a;
+    }
+
+    .badge-warning {
+      background: #feebc8;
+      color: #c05621;
+    }
+
+    .error {
+      background: #fed7d7;
+      color: #c53030;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .success {
+      background: #c6f6d5;
+      color: #2f855a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #718096;
+    }
+
+    .hidden { display: none; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 12px 24px;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: transparent;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="login-box">
+    <div style="text-align: center; font-size: 64px; margin-bottom: 16px;">🛡️</div>
+    <h2>Parent Dashboard Login</h2>
+    <p style="text-align: center; color: #718096; margin-bottom: 24px;">Access from any device on your network</p>
+    
+    <div id="loginError" class="error"></div>
+    
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="backendUrl">Backend URL</label>
+        <input type="text" id="backendUrl" value="http://192.168.254.141:8000" placeholder="http://192.168.1.100:8000" required>
+        <small style="color: #718096;">Use your computer's IP address</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Parent Email</label>
+        <input type="email" id="email" placeholder="test@parent.com" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" placeholder="Enter password" required>
+          <button type="button" class="password-toggle" onclick="togglePassword()">👁️</button>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Login</button>
+    </form>
+  </div>
+
+  <!-- Dashboard Screen -->
+  <div id="dashboardScreen" class="container hidden">
+    <div class="header">
+      <div class="brand">
+        <span class="brand-icon">🛡️</span>
+        <div>
+          <div class="brand-title">SafeGuard Family</div>
+          <div style="font-size: 13px; color: #718096;">Web Dashboard</div>
+        </div>
+      </div>
+      <div class="user-info">
+        <span id="userEmail" style="color: #2d3748; font-weight: 600;"></span>
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview</button>
+      <button class="tab-btn" onclick="switchTab('usage')">⏱️ Usage & Limits</button>
+      <button class="tab-btn" onclick="switchTab('blocked')">🚫 Blocked Sites</button>
+      <button class="tab-btn" onclick="switchTab('comments')">💬 Hidden Comments</button>
+    </div>
+
+    <!-- Overview Tab -->
+    <div id="overviewTab" class="tab-content active">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-icon">🛡️</div>
+          <div class="stat-label">Total Blocked</div>
+          <div class="stat-value" id="totalBlocked">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-label">Blocked Today</div>
+          <div class="stat-value" id="blockedToday">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-label">Usage Today</div>
+          <div class="stat-value" id="usageToday">0m</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💬</div>
+          <div class="stat-label">Comments Hidden</div>
+          <div class="stat-value" id="commentsHidden">0</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Recent Blocked Sites</h2>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>URL</th>
+                <th>Category</th>
+                <th>Child</th>
+              </tr>
+            </thead>
+            <tbody id="recentBlockedTable">
+              <tr><td colspan="4" class="loading">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Tab -->
+    <div id="usageTab" class="tab-content">
+      <div class="section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2>Per-Site Usage (Real-time)</h2>
+          <button class="btn btn-primary" onclick="loadUsage()">🔄 Refresh</button>
+        </div>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Time Today</th>
+                <th>Limit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="usageTable">
+              <tr><td colspan="4" class="loading">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blocked Sites Tab -->
+    <div id="blockedTab" class="tab-content">
+      <div class="section">
+        <h2>All Blocked Sites</h2>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>URL</th>
+                <th>Category</th>
+                <th>Child</th>
+              </tr>
+            </thead>
+            <tbody id="blockedSitesTable">
+              <tr><td colspan="4" class="loading">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments Tab -->
+    <div id="commentsTab" class="tab-content">
+      <div class="section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2>Hidden Comments</h2>
+          <button class="btn btn-primary" onclick="loadComments()">🔄 Refresh</button>
+        </div>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Post</th>
+                <th>Comment Text</th>
+                <th>Reason</th>
+                <th>Severity</th>
+              </tr>
+            </thead>
+            <tbody id="commentsTable">
+              <tr><td colspan="5" class="loading">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let authToken = '';
+    let childId = '';
+    let backendUrl = '';
+    let autoRefreshInterval = null;
+
+    // Toggle password visibility
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const btn = event.target;
+      input.type = input.type === 'password' ? 'text' : 'password';
+      btn.textContent = input.type === 'password' ? '👁️' : '🙈';
+    }
+
+    // Login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      backendUrl = document.getElementById('backendUrl').value.replace(/\/$/, '');
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        const response = await fetch(`${backendUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        console.log('Login response:', data);
+        
+        if (data.status === 'success') {
+          authToken = data.token;
+          console.log('Auth token received:', authToken ? 'Yes' : 'No');
+          
+          // Get children list
+          try {
+            const childrenRes = await fetch(`${backendUrl}/api/children`, {
+              headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const childrenData = await childrenRes.json();
+            console.log('Children data:', childrenData);
+            
+            if (childrenData.children && childrenData.children.length > 0) {
+              childId = childrenData.children[0].id;
+              console.log('Child ID found:', childId);
+            } else {
+              console.warn('No children found in account');
+              // Create a default child if none exists
+              const createChildRes = await fetch(`${backendUrl}/api/children`, {
+                method: 'POST',
+                headers: { 
+                  'Authorization': `Bearer ${authToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  name: 'My Child',
+                  device_name: 'Web Dashboard',
+                  device_type: 'browser'
+                })
+              });
+              const newChild = await createChildRes.json();
+              if (newChild.child && newChild.child.id) {
+                childId = newChild.child.id;
+                console.log('Created new child ID:', childId);
+              }
+            }
+          } catch (childError) {
+            console.error('Error fetching children:', childError);
+          }
+          
+          document.getElementById('userEmail').textContent = email;
+          document.getElementById('loginScreen').classList.add('hidden');
+          document.getElementById('dashboardScreen').classList.remove('hidden');
+          
+          await loadAllData();
+          startAutoRefresh();
+        } else {
+          showError(data.message || 'Login failed');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showError('Cannot connect to backend: ' + error.message);
+      }
+    });
+
+    function showError(message) {
+      const errorDiv = document.getElementById('loginError');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+
+    function logout() {
+      authToken = '';
+      childId = '';
+      stopAutoRefresh();
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('dashboardScreen').classList.add('hidden');
+      document.getElementById('loginForm').reset();
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById(tabName + 'Tab').classList.add('active');
+    }
+
+    async function loadAllData() {
+      console.log('Loading all data with childId:', childId);
+      if (!childId) {
+        console.error('No child ID available!');
+        return;
+      }
+      await Promise.all([
+        loadOverview(),
+        loadUsage(),
+        loadBlockedSites(),
+        loadComments()
+      ]);
+    }
+
+    async function loadOverview() {
+      console.log('Loading overview for child:', childId);
+      if (!childId) return;
+      
+      try {
+        const [blockedRes, usageRes] = await Promise.all([
+          fetch(`${backendUrl}/api/blocked/${childId}?limit=10`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          }),
+          fetch(`${backendUrl}/api/usage/${childId}?days=1`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          })
+        ]);
+
+        console.log('Blocked response status:', blockedRes.status);
+        console.log('Usage response status:', usageRes.status);
+
+        const blocked = await blockedRes.json();
+        const usage = await usageRes.json();
+
+        console.log('Blocked data:', blocked);
+        console.log('Usage data:', usage);
+
+        // Update stats
+        document.getElementById('totalBlocked').textContent = blocked.total || 0;
+        
+        const today = new Date().toDateString();
+        const blockedToday = (blocked.blocked_sites || []).filter(s => 
+          new Date(s.timestamp).toDateString() === today
+        ).length;
+        document.getElementById('blockedToday').textContent = blockedToday;
+        
+        document.getElementById('usageToday').textContent = formatDuration(usage.total_seconds || 0);
+
+        // Recent blocked table
+        const table = document.getElementById('recentBlockedTable');
+        if (blocked.blocked_sites && blocked.blocked_sites.length > 0) {
+          table.innerHTML = blocked.blocked_sites.slice(0, 10).map(site => `
+            <tr>
+              <td>${formatTime(site.timestamp)}</td>
+              <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${site.url}</td>
+              <td><span class="badge badge-danger">${site.category}</span></td>
+              <td>${site.child_name || 'Child'}</td>
+            </tr>
+          `).join('');
+        } else {
+          table.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #718096;">No blocked sites yet</td></tr>';
+        }
+      } catch (error) {
+        console.error('Load overview failed:', error);
+      }
+    }
+
+    async function loadUsage() {
+      console.log('Loading usage for child:', childId);
+      if (!childId) return;
+      
+      try {
+        const response = await fetch(`${backendUrl}/api/usage/${childId}?days=1`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        console.log('Usage API response status:', response.status);
+        const data = await response.json();
+        console.log('Usage data received:', data);
+        
+        const table = document.getElementById('usageTable');
+        if (data.usage && data.usage.length > 0) {
+          table.innerHTML = data.usage.map(item => {
+            const percentage = item.limit_minutes ? (item.seconds / 60 / item.limit_minutes * 100).toFixed(0) : 0;
+            const status = percentage >= 100 ? 'Blocked' : percentage >= 80 ? 'Warning' : 'Normal';
+            const badgeClass = percentage >= 100 ? 'badge-danger' : percentage >= 80 ? 'badge-warning' : 'badge-success';
+            
+            return `
+              <tr>
+                <td>${item.domain}</td>
+                <td>${formatDuration(item.seconds)}</td>
+                <td>${item.limit_minutes ? item.limit_minutes + 'm' : 'No limit'}</td>
+                <td><span class="badge ${badgeClass}">${status}</span></td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          table.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #718096;">No usage data yet</td></tr>';
+        }
+      } catch (error) {
+        console.error('Load usage failed:', error);
+      }
+    }
+
+    async function loadBlockedSites() {
+      console.log('Loading blocked sites for child:', childId);
+      if (!childId) return;
+      
+      try {
+        const response = await fetch(`${backendUrl}/api/blocked/${childId}?limit=100`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        console.log('Blocked sites API response status:', response.status);
+        const data = await response.json();
+        console.log('Blocked sites data received:', data);
+        
+        const table = document.getElementById('blockedSitesTable');
+        if (data.blocked_sites && data.blocked_sites.length > 0) {
+          table.innerHTML = data.blocked_sites.map(site => `
+            <tr>
+              <td>${formatDateTime(site.timestamp)}</td>
+              <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis;">${site.url}</td>
+              <td><span class="badge badge-danger">${site.category}</span></td>
+              <td>${site.child_name || 'Child'}</td>
+            </tr>
+          `).join('');
+        } else {
+          table.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #718096;">No blocked sites yet</td></tr>';
+        }
+      } catch (error) {
+        console.error('Load blocked sites failed:', error);
+      }
+    }
+
+    async function loadComments() {
+      console.log('Loading comments for child:', childId);
+      if (!childId) return;
+      
+      try {
+        const response = await fetch(`${backendUrl}/api/comments/hidden/${childId}`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        console.log('Comments API response status:', response.status);
+        const data = await response.json();
+        console.log('Comments data received:', data);
+        
+        document.getElementById('commentsHidden').textContent = data.comments ? data.comments.length : 0;
+        
+        const table = document.getElementById('commentsTable');
+        if (data.comments && data.comments.length > 0) {
+          table.innerHTML = data.comments.map(comment => {
+            const severityClass = comment.severity === 2 ? 'badge-danger' : 'badge-warning';
+            const severityText = comment.severity === 2 ? 'HIGH' : 'MEDIUM';
+            
+            return `
+              <tr>
+                <td>${formatTime(comment.timestamp)}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${comment.post_title}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${comment.comment_text}</td>
+                <td>${comment.reason}</td>
+                <td><span class="badge ${severityClass}">${severityText}</span></td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          table.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #718096;">No hidden comments yet</td></tr>';
+        }
+      } catch (error) {
+        console.error('Load comments failed:', error);
+      }
+    }
+
+    function startAutoRefresh() {
+      if (autoRefreshInterval) return;
+      autoRefreshInterval = setInterval(() => {
+        loadAllData();
+      }, 15000); // Refresh every 15 seconds
+      console.log('Auto-refresh started');
+    }
+
+    function stopAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+    }
+
+    function formatDuration(seconds) {
+      if (seconds < 60) return seconds + 's';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return minutes + 'm';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return hours + 'h ' + mins + 'm';
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDateTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  FACEBOOK COMMENT FILTER - Content Script (Real-time Version)  ║
+// ║  Runs on Facebook pages and filters toxic comments in REAL-TIME║
+// ╚═══════════════════════════════════════════════════════════════╝
+
+let filterEnabled = true;
+let commentsBlocked = 0;
+let processedComments = new Set();
+
+// Load settings from storage
+chrome.storage.local.get(['filterEnabled'], (result) => {
+    filterEnabled = result.filterEnabled !== false;
+    if (filterEnabled) {
+        startFiltering();
+    }
+});
+
+// Listen for toggle messages
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'toggleFilter') {
+        filterEnabled = request.enabled;
+        if (filterEnabled) {
+            startFiltering();
+        } else {
+            stopFiltering();
+        }
+        sendResponse({ status: 'ok' });
+    } else if (request.action === 'getStats') {
+        sendResponse({ commentsBlocked });
+    }
+    return true;
+});
+
+let intervalId = null;
+let mutationObserver = null;
+
+function startFiltering() {
+    console.log('🛡️ SafeGuard: Comment filtering ENABLED - Real-time monitoring active');
+    
+    // Initial scan
+    scanAndFilterComments();
+    
+    // Fast polling scan (every 1 second for real-time response)
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(scanAndFilterComments, 1000);
+    
+    // Set up mutation observer to catch comments as they're added
+    if (mutationObserver) mutationObserver.disconnect();
+    mutationObserver = new MutationObserver((mutations) => {
+        // Debounce to avoid excessive scanning
+        clearTimeout(mutationObserver.debounceTimer);
+        mutationObserver.debounceTimer = setTimeout(() => {
+            scanAndFilterComments();
+        }, 100);
+    });
+    
+    // Watch the entire document for changes
+    mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: false,
+        characterData: false
+    });
+}
+
+function stopFiltering() {
+    console.log('🛡️ SafeGuard: Comment filtering DISABLED');
+    if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
+    if (mutationObserver) {
+        mutationObserver.disconnect();
+        mutationObserver = null;
+    }
+}
+
+async function scanAndFilterComments() {
+    // Multiple selector strategies for Facebook comments (they change frequently)
+    const selectors = [
+        'div[data-testid="comment"]',           // Main comment container
+        'div[data-uia="comment_container"]',    // Alternative identifier
+        'div.x6ikm8r.x1rg5obf',                 // CSS class selector
+        'div[role="article"] > div > div',      // Semantic selector
+        'div[aria-label*="Comment"]'            // Accessibility attribute
+    ];
+    
+    let commentElements = [];
+    for (const selector of selectors) {
+        try {
+            const elements = document.querySelectorAll(selector);
+            commentElements = Array.from(new Set([...commentElements, ...elements]));
+        } catch (e) {
+            console.warn('SafeGuard: Selector failed:', selector);
+        }
+    }
+    
+    console.log(`🛡️ SafeGuard: Found ${commentElements.length} comment elements`);
+    
+    for (const element of commentElements) {
+        // Skip if already processed
+        const elementId = element.getAttribute('data-safeguard-id') || 
+                         Math.random().toString(36).substring(7);
+        
+        if (processedComments.has(elementId) || element.dataset.safeguardHidden) {
+            continue;
+        }
+        
+        element.setAttribute('data-safeguard-id', elementId);
+        
+        // Extract comment text - try multiple strategies
+        let commentText = '';
+        
+        // Strategy 1: Use innerText (filtered)
+        commentText = element.innerText || '';
+        
+        // Strategy 2: Look for text in child elements if innerText is empty
+        if (!commentText.trim()) {
+            const textNodes = element.querySelectorAll('span, p, div[role="button"]');
+            for (const node of textNodes) {
+                if (node.textContent.trim().length > 3) {
+                    commentText = node.textContent;
+                    break;
+                }
+            }
+        }
+        
+        if (!commentText || commentText.trim().length < 3) continue;
+        
+        // Clean up comment text for analysis
+        const cleanText = commentText.trim();
+        console.log(`📝 SafeGuard: Scanning - "${cleanText.substring(0, 60)}..."`);
+        
+        // Quick local check first (fastest)
+        if (containsToxicWords(cleanText)) {
+            console.log(`❌ SafeGuard: BLOCKED (contains toxic words)`);
+            await hideCommentRealTime(element, "Contains inappropriate language", cleanText);
+            processedComments.add(elementId);
+            commentsBlocked++;
+            continue;
+        }
+        
+        // Use API for deeper analysis (with timeout)
+        try {
+            const response = await Promise.race([
+                fetch('http://localhost:8000/api/analyze-comment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: cleanText })
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('timeout')), 3000)
+                )
+            ]);
+            
+            const result = await response.json();
+            
+            if (result.is_toxic) {
+                console.log(`❌ SafeGuard: API says TOXIC - ${result.reason}`);
+                await hideCommentRealTime(element, result.reason || "Inappropriate content", cleanText);
+                commentsBlocked++;
+            } else {
+                console.log(`✅ SafeGuard: API says SAFE`);
+            }
+        } catch (error) {
+            console.log(`⏭️ SafeGuard: API check skipped (${error.message})`);
+            // Don't block if API fails - let it pass
+        }
+        
+        processedComments.add(elementId);
+    }
+}
+
+function containsToxicWords(text) {
+    const toxicWords = [
+        'kill', 'die', 'hate', 'stupid', 'idiot', 'dumb', 'shit', 'fuck',
+        'damn', 'bitch', 'ass', 'crap', 'loser', 'ugly', 'fat', 'retard',
+        'gay', 'fag', 'slut', 'whore', 'nigger', 'kys', 'suicide', 'bachha',
+        'mug', 'kasto', 'chutiya', 'madarchod', 'behenchod', 'gaandu'
+    ];
+    
+    // Angry/violent emoji patterns
+    const angryEmojis = ['🤬', '😡', '🖕', '💀', '☠️', '😠', '👿', '🔥'];
+    
+    const lowerText = text.toLowerCase();
+    
+    // Check for toxic words
+    if (toxicWords.some(word => lowerText.includes(word))) {
+        console.log('🛡️ Found toxic word');
+        return true;
+    }
+    
+    // Check for angry emoji patterns (3+ angry/sad emojis = toxic)
+    const angryEmojiChars = ['🤬', '😡', '🖕', '💀', '☠', '😠', '👿', '🔥', '😤', '😠', '😡'];
+    let emojiCount = 0;
+    for (const emoji of angryEmojiChars) {
+        const matches = text.match(new RegExp(emoji, 'g'));
+        emojiCount += matches ? matches.length : 0;
+    }
+    
+    if (emojiCount >= 3) {
+        console.log('🛡️ Found ' + emojiCount + ' angry emojis');
+        return true;
+    }
+    
+    return false;
+}
+
+async function hideCommentRealTime(element, reason, commentText) {
+    try {
+        // Mark element as hidden
+        element.dataset.safeguardHidden = 'true';
+        
+        // Log to backend
+        await logHiddenComment(commentText, reason);
+        
+        // Create SafeGuard replacement div
+        const replacement = document.createElement('div');
+        replacement.className = 'safeguard-hidden-comment';
+        replacement.style.cssText = `
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            border-radius: 8px;
+            font-size: 13px;
+            margin: 8px 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            border: 2px solid #5a67d8;
+            z-index: 9999;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            font-weight: 500;
+        `;
+        
+        replacement.innerHTML = `
+            <div style="width: 100%;">
+                <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">🛡️ SafeGuard Family</div>
+                <div style="font-size: 12px; opacity: 0.95;">Comment hidden: ${reason}</div>
+                <div style="font-size: 11px; opacity: 0.8; margin-top: 6px;">This comment contains inappropriate content</div>
+            </div>
+        `;
+        
+        // Completely replace the element content
+        element.innerHTML = '';
+        element.appendChild(replacement);
+        
+        // Force visibility (override any CSS)
+        element.style.display = 'block !important';
+        element.style.visibility = 'visible !important';
+        element.style.opacity = '1 !important';
+        element.style.height = 'auto !important';
+        element.style.minHeight = '60px';
+        element.style.overflow = 'visible !important';
+        
+        console.log(`✅ SafeGuard: Comment HIDDEN with banner`);
+    } catch (error) {
+        console.error('SafeGuard: Error hiding comment:', error);
+    }
+}
+
+async function logHiddenComment(commentText, reason) {
+    try {
+        const childId = await chrome.storage.local.get('childId');
+        if (!childId.childId) return;
+        
+        const authToken = await chrome.storage.local.get('authToken');
+        if (!authToken.authToken) return;
+        
+        await fetch('http://localhost:8000/api/comments/hidden', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken.authToken}`
+            },
+            body: JSON.stringify({
+                child_id: childId.childId,
+                post_url: window.location.href,
+                post_title: document.title || 'Facebook Post',
+                comment_text: commentText.substring(0, 500),
+                reason: reason,
+                severity: reason.includes('hate') || reason.includes('violence') ? 2 : 1,
+                domain: 'facebook.com'
+            })
+        });
+        
+        console.log('🛡️ SafeGuard: Comment logged to backend');
+    } catch (error) {
+        console.error('SafeGuard: Failed to log comment:', error);
+    }
+}
+
+console.log('🛡️ SafeGuard Family: Facebook filter loaded');

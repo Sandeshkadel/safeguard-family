@@ -7,11 +7,11 @@ Write-Host "====================================================================
 
 # STEP 1: Check Python Installation
 Write-Host "`n[STEP 1/7] Checking Python Installation..." -ForegroundColor Yellow
-try {
-    $pythonVersion = python --version 2>&1
+$pythonVersion = python --version 2>&1
+if ($LASTEXITCODE -eq 0) {
     Write-Host "OK - Python found: $pythonVersion" -ForegroundColor Green
 }
-catch {
+else {
     Write-Host "ERROR: Python not found or not in PATH" -ForegroundColor Red
     Write-Host "Please install Python 3.8+ from https://python.org" -ForegroundColor Red
     Exit 1
@@ -21,11 +21,11 @@ catch {
 Write-Host "`n[STEP 2/7] Checking Working Directory..." -ForegroundColor Yellow
 $currentPath = Get-Location
 Write-Host "Current directory: $currentPath" -ForegroundColor Cyan
-if (Test-Path "backend_enhanced.py") {
-    Write-Host "OK - Found backend_enhanced.py" -ForegroundColor Green
+if (Test-Path "backend_final.py") {
+    Write-Host "OK - Found backend_final.py" -ForegroundColor Green
 }
 else {
-    Write-Host "ERROR: backend_enhanced.py not found!" -ForegroundColor Red
+    Write-Host "ERROR: backend_final.py not found!" -ForegroundColor Red
     Exit 1
 }
 
@@ -111,7 +111,7 @@ foreach ($pkg in $packages) {
 Write-Host "`n[STEP 7/7] Setup Summary..." -ForegroundColor Yellow
 Write-Host "`nSetup completed! Ready to start the backend server." -ForegroundColor Green
 Write-Host "`nTo start the backend:" -ForegroundColor Cyan
-Write-Host "    python backend_enhanced.py" -ForegroundColor White
+Write-Host "    python backend_final.py" -ForegroundColor White
 
 Write-Host "`nBackend will run on:" -ForegroundColor Cyan
 Write-Host "    http://localhost:8000" -ForegroundColor White
@@ -131,4 +131,4 @@ Read-Host "`nPress Enter to start backend (or Ctrl+C to cancel)"
 Write-Host "`nStarting SafeGuard Backend Server..." -ForegroundColor Cyan
 Write-Host "Listening on http://127.0.0.1:8000`n" -ForegroundColor Green
 
-python backend_enhanced.py
+python backend_final.py

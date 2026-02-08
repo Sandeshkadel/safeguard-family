@@ -11,12 +11,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (token) {
     // Verify token is still valid
     try {
-      await apiCall('POST', '/api/auth/verify', {});
+      await apiCall('GET', '/api/profile');
       window.location.href = 'dashboard.html';
       return;
     } catch (e) {
       // Token is invalid, let user log in
+      await removeStorageValue('authToken');
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PASSWORD TOGGLE FUNCTIONALITY
+  // ═══════════════════════════════════════════════════════════════
+  const passwordInput = document.getElementById('password');
+  const toggleButton = document.getElementById('togglePassword');
+  
+  if (toggleButton && passwordInput) {
+    toggleButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Toggle between password and text input type
+      const isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      
+      // Update button emoji
+      toggleButton.textContent = isPassword ? '🙈' : '👁️';
+      toggleButton.title = isPassword ? 'Hide password' : 'Show password';
+      
+      // Focus back on input
+      passwordInput.focus();
+    });
+    
+    // Also toggle when user presses space/enter on the toggle button
+    toggleButton.addEventListener('keypress', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggleButton.click();
+      }
+    });
   }
 });
 
@@ -37,57 +69,70 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     console.log('Attempting login with email:', email);
     const response = await apiCall('POST', '/api/auth/login', {
       email: email,
-      password: password,
-      device_name: 'Chrome Extension'
+      password: password
     });
 
-    if (response.success) {
+    if (response.status === 'success') {
       console.log('Login successful');
       
       // Store authentication token
       await setStorageValue('authToken', response.token);
+      await setStorageValue('parentToken', response.token);
 
       // Store backend URL for background worker
       await setStorageValue('backendUrl', API_CONFIG.baseURL + '/api');
       
       // Store parent info
-      await setStorageValue('parentId', response.parent_id);
-      await setStorageValue('parentEmail', response.email);
-      await setStorageValue('parentName', response.full_name);
+      await setStorageValue('parentId', response.parent.id);
+      await setStorageValue('parentEmail', response.parent.email);
+      await setStorageValue('parentName', response.parent.full_name);
       
-      // Resolve child profile from backend
-      try {
-        const childrenResponse = await apiCall('GET', '/api/children');
-        if (childrenResponse.success && childrenResponse.children && childrenResponse.children.length) {
-          const child = childrenResponse.children[0];
-          await setStorageValue('childId', child.id);
-          await setStorageValue('childName', child.name);
-        } else {
-          const existingChildName = await getStorageValue('childName');
-          if (existingChildName) {
-            const createChildResponse = await apiCall('POST', '/api/children', { name: existingChildName });
-            if (createChildResponse.success) {
-              await setStorageValue('childId', createChildResponse.child_id);
-              await setStorageValue('childName', createChildResponse.name);
+      // Resolve child profile from backend (non-blocking)
+      // This runs in the background, login succeeds even if it fails
+      Promise.resolve().then(async () => {
+        try {
+          const childrenResponse = await apiCall('GET', '/api/children');
+          if (childrenResponse.status === 'success' && childrenResponse.children && childrenResponse.children.length) {
+            const child = childrenResponse.children[0];
+            await setStorageValue('childId', child.id);
+            await setStorageValue('childName', child.name);
+            console.log('Child profile synced:', child.name);
+          } else {
+            // Create default child if none exists
+            const existingChildName = await getStorageValue('childName') || 'My Child';
+            const createChildResponse = await apiCall('POST', '/api/children', {
+              name: existingChildName,
+              device_id: generateDeviceId(),
+              device_name: 'Chrome Extension'
+            });
+            if (createChildResponse.status === 'success') {
+              await setStorageValue('childId', createChildResponse.child.id);
+              await setStorageValue('childName', createChildResponse.child.name);
+              console.log('Child profile created:', createChildResponse.child.name);
             }
           }
+        } catch (e) {
+          console.warn('Child profile sync failed (non-critical):', e);
+          // Set defaults so dashboard doesn't break
+          const existingChildId = await getStorageValue('childId');
+          const existingChildName = await getStorageValue('childName');
+          if (!existingChildId) await setStorageValue('childId', 'default-child-id');
+          if (!existingChildName) await setStorageValue('childName', 'My Child');
         }
-      } catch (e) {
-        console.warn('Child profile sync failed:', e);
-      }
+      });
 
       // Store session info
       await setStorageValue('dashboardSession', {
         active: true,
         createdAt: Date.now(),
-        expiresAt: Date.parse(response.expires_at)
+        expiresAt: Date.now() + (response.expires_in * 1000)
       });
 
       // Redirect to dashboard
       console.log('Redirecting to dashboard...');
       window.location.href = 'dashboard.html';
     } else {
-      throw new Error(response.error || 'Login failed');
+      throw new Error(response.message || 'Login failed');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -106,6 +151,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     loginButton.textContent = 'Login';
   }
 });
+
+function generateDeviceId() {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).slice(2, 10);
+  return `device_${timestamp}_${random}`;
+}
 
 // Add a link to show backend status
 document.addEventListener('DOMContentLoaded', () => {

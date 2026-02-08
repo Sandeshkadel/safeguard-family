@@ -70,22 +70,21 @@ document.getElementById('setupForm').addEventListener('submit', async (e) => {
       full_name: fullName
     });
 
-    if (!registerResponse.success) {
-      throw new Error(registerResponse.error || 'Registration failed on backend');
+    if (registerResponse.status !== 'success') {
+      throw new Error(registerResponse.detail || 'Registration failed on backend');
     }
 
-    console.log('Parent account created:', registerResponse.parent_id);
-    const parentId = registerResponse.parent_id;
+    console.log('Parent account created:', registerResponse.parent.id);
+    const parentId = registerResponse.parent.id;
 
     // Step 2: Automatically login to get token
     const loginResponse = await apiCall('POST', '/api/auth/login', {
       email: parentEmail,
-      password: parentPassword,
-      device_name: 'Chrome Extension'
+      password: parentPassword
     });
 
-    if (!loginResponse.success) {
-      throw new Error(loginResponse.error || 'Login failed after registration');
+    if (loginResponse.status !== 'success') {
+      throw new Error(loginResponse.detail || 'Login failed after registration');
     }
 
     console.log('Auto-login successful');
@@ -99,14 +98,16 @@ document.getElementById('setupForm').addEventListener('submit', async (e) => {
 
     // Step 4: Create child profile on backend
     const childResponse = await apiCall('POST', '/api/children', {
-      name: childName
+      name: childName,
+      device_id: generateChildId(),
+      device_name: 'Chrome Extension'
     });
 
-    if (!childResponse.success) {
-      throw new Error(childResponse.error || 'Failed to create child profile');
+    if (childResponse.status !== 'success') {
+      throw new Error(childResponse.detail || 'Failed to create child profile');
     }
 
-    const childId = childResponse.child_id;
+    const childId = childResponse.child.id;
 
     // Step 5: Store locally for extension use
     await chrome.storage.local.set({
@@ -133,7 +134,7 @@ document.getElementById('setupForm').addEventListener('submit', async (e) => {
       dashboardSession: {
         active: true,
         createdAt: Date.now(),
-        expiresAt: Date.parse(loginResponse.expires_at)
+        expiresAt: Date.now() + (loginResponse.expires_in * 1000)
       }
     });
 
@@ -164,6 +165,119 @@ document.getElementById('setupForm').addEventListener('submit', async (e) => {
     submitButton.textContent = 'Complete Setup & Activate Protection';
   }
 });
+
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const parentEmail = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const parentPassword = document.getElementById('loginPassword').value;
+    const childNameInput = document.getElementById('loginChildName').value.trim();
+
+    const loginButton = document.getElementById('loginButton');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+
+    errorMessage.style.display = 'none';
+    successMessage.style.display = 'none';
+
+    if (!parentEmail || !parentPassword) {
+      showError('Please enter your email and password');
+      return;
+    }
+
+    loginButton.disabled = true;
+    loginButton.textContent = 'Logging in...';
+
+    try {
+      const loginResponse = await apiCall('POST', '/api/auth/login', {
+        email: parentEmail,
+        password: parentPassword
+      });
+
+      if (loginResponse.status !== 'success') {
+        throw new Error(loginResponse.message || 'Login failed');
+      }
+
+      const token = loginResponse.token;
+
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.authToken]: token,
+        parentToken: token,
+        backendUrl: API_CONFIG.baseURL + '/api',
+        [STORAGE_KEYS.parentEmail]: loginResponse.parent.email,
+        [STORAGE_KEYS.parentId]: loginResponse.parent.id
+      });
+
+      let childId = null;
+      let childName = null;
+
+      try {
+        const childrenResponse = await apiCall('GET', '/api/children');
+        if (childrenResponse.status === 'success' && childrenResponse.children && childrenResponse.children.length) {
+          childId = childrenResponse.children[0].id;
+          childName = childrenResponse.children[0].name;
+        }
+      } catch (error) {
+        console.warn('Child fetch failed during login:', error);
+      }
+
+      if (!childId) {
+        const fallbackChildName = childNameInput || 'Child';
+        const childResponse = await apiCall('POST', '/api/children', {
+          name: fallbackChildName,
+          device_id: generateChildId(),
+          device_name: 'Chrome Extension'
+        });
+
+        if (childResponse.status === 'success') {
+          childId = childResponse.child.id;
+          childName = childResponse.child.name;
+        }
+      }
+
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.setupComplete]: true,
+        [STORAGE_KEYS.childId]: childId,
+        [STORAGE_KEYS.childName]: childName,
+        [STORAGE_KEYS.blockedDomains]: [],
+        [STORAGE_KEYS.allowedDomains]: [],
+        [STORAGE_KEYS.blockedLog]: [],
+        [STORAGE_KEYS.historyLog]: [],
+        [STORAGE_KEYS.settings]: {
+          blockAdult: true,
+          blockGambling: true,
+          blockViolence: true,
+          blockDrugs: true,
+          blockHate: true,
+          blockMalware: true,
+          logAllVisits: true
+        },
+        dashboardSession: {
+          active: true,
+          createdAt: Date.now(),
+          expiresAt: Date.now() + (loginResponse.expires_in * 1000)
+        }
+      });
+
+      successMessage.textContent = '✅ Login successful! Redirecting to dashboard...';
+      successMessage.style.display = 'block';
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 800);
+
+    } catch (error) {
+      let errorMsg = error.message || 'Login failed';
+      if (errorMsg.includes('Invalid email or password')) {
+        errorMsg = 'Incorrect email or password.';
+      }
+      showError(errorMsg);
+      loginButton.disabled = false;
+      loginButton.textContent = 'Login & Open Dashboard';
+    }
+  });
+}
 
 function showError(message) {
   const errorMessage = document.getElementById('errorMessage');

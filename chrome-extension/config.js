@@ -8,26 +8,22 @@
 // 📦 GitHub: https://github.com/Sandeshkadel/safeguard-family
 
 const API_CONFIG = {
-  // 🚀 PRODUCTION (Vercel)
-  // baseURL: 'https://safeguard-family.vercel.app',
+  // 🚀 LOCAL DEVELOPMENT - CORRECT SETUP
+  baseURL: 'http://localhost:8000',
   
-  // 💻 LOCAL DEVELOPMENT (Uncomment for local testing)
-  baseURL: 'http://192.168.254.156:5000',
-  // baseURL: 'http://localhost:5000',
+  // 🚀 PRODUCTION (Vercel) - Uncomment when deploying
+  // baseURL: 'https://safeguard-family.vercel.app',
   
   endpoints: {
     register: '/api/auth/register',
     login: '/api/auth/login',
-    verify: '/api/auth/verify',
-    getParent: '/api/parent/me',
-    getChildren: '/api/parent/children',
-    getChild: '/api/child/:childId',
-    getDevices: '/api/child/:childId/devices',
-    getBlockedLogs: '/api/child/:childId/blocked-logs',
-    getHistoryLogs: '/api/child/:childId/history-logs',
-    addBlockedDomain: '/api/child/:childId/blocklist',
-    addAllowedDomain: '/api/child/:childId/allowlist',
-    updateSettings: '/api/child/:childId/settings'
+    logout: '/api/auth/logout',
+    getProfile: '/api/profile',
+    getChildren: '/api/children',
+    addChild: '/api/children',
+    deleteChild: '/api/children/:childId',
+    getReport: '/api/reports/weekly/:childId',
+    health: '/health'
   },
   
   timeout: 10000 // 10 seconds
@@ -42,28 +38,46 @@ async function apiCall(method, endpoint, data = null) {
     method: method,
     headers: {
       'Content-Type': 'application/json'
-    },
-    timeout: API_CONFIG.timeout
+    }
   };
   
   if (token) {
     options.headers['Authorization'] = `Bearer ${token}`;
   }
   
-  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
     options.body = JSON.stringify(data);
   }
   
   try {
+    // Implement timeout using AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+    options.signal = controller.signal;
+    
     const response = await fetch(url, options);
-    const result = await response.json();
+    clearTimeout(timeoutId);
+    
+    const contentType = response.headers.get('content-type') || '';
+    let result = null;
+
+    if (contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(text || `API Error: ${response.status}`);
+    }
     
     if (!response.ok) {
-      throw new Error(result.error || `API Error: ${response.status}`);
+      throw new Error(result.message || result.error || `API Error: ${response.status}`);
     }
     
     return result;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error(`API Call Timeout (${method} ${endpoint})`);
+      throw new Error('Request timeout - backend not responding');
+    }
     console.error(`API Call Failed (${method} ${endpoint}):`, error);
     throw error;
   }

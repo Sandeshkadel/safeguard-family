@@ -370,13 +370,14 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    showMessage(data.detail || 'Authentication failed');
+                    showMessage(data.message || data.detail || 'Authentication failed');
                     setLoading(false);
                     return;
                 }
 
                 // Store token and user info
                 chrome.storage.local.set({
+                    authToken: data.token,
                     parentToken: data.token,
                     parentId: data.parent.id,
                     parentEmail: data.parent.email,

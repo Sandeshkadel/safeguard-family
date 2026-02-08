@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   parentEmail: 'parentEmail',
   parentId: 'parentId',
   childName: 'childName',
+  childId: 'childId',
   authToken: 'authToken',
   blockedLog: 'blockedLog',
   historyLog: 'historyLog',
@@ -32,6 +33,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindNav();
   bindActions();
   await refreshAll();
+  
+  // ═══════════════════════════════════════════════════════════════
+  // AUTO-REFRESH FOR REAL-TIME UPDATES (every 10 seconds)
+  // ═══════════════════════════════════════════════════════════════
+  let autoRefreshInterval = null;
+  
+  function startAutoRefresh() {
+    if (autoRefreshInterval) return; // Already running
+    
+    console.log('🔄 Dashboard: Auto-refresh started (every 10 seconds)');
+    autoRefreshInterval = setInterval(async () => {
+      try {
+        // Only refresh usage and overview tabs for performance
+        const activeTab = document.querySelector('.tab.active');
+        if (activeTab.id === 'usage') {
+          await loadUsageAndLimits();
+        } else if (activeTab.id === 'overview') {
+          await loadOverviewStats();
+        } else if (activeTab.id === 'comments') {
+          await loadHiddenComments();
+        }
+      } catch (error) {
+        console.warn('Auto-refresh error:', error);
+      }
+    }, 10000); // 10 seconds
+  }
+  
+  function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+      console.log('🛑 Dashboard: Auto-refresh stopped');
+    }
+  }
+  
+  // Start auto-refresh when loading usage or overview tab
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.getAttribute('data-tab');
+      if (tabId === 'usage' || tabId === 'overview' || tabId === 'comments') {
+        startAutoRefresh();
+      } else {
+        stopAutoRefresh();
+      }
+    });
+  });
+  
+  // Initial start for overview tab
+  startAutoRefresh();
 });
 
 async function ensureSession() {
@@ -51,12 +101,22 @@ async function ensureSession() {
     return;
   }
 
-  // Try to verify token with backend
+  // Try to verify token with backend (with timeout)
   try {
-    await apiCall('POST', '/api/auth/verify', {});
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), 5000)
+    );
+    const apiPromise = apiCall('GET', '/api/profile');
+    
+    await Promise.race([apiPromise, timeoutPromise]);
     console.log('Session verified with backend');
   } catch (error) {
-    console.warn('Backend unavailable, continuing with local data', error);
+    if (String(error.message || '').includes('401')) {
+      await removeStorageValue('authToken');
+      window.location.href = 'login.html';
+      return;
+    }
+    console.warn('Backend verification skipped (continuing with local data):', error.message);
     // Allow local-only access if backend is unavailable
   }
 }
@@ -80,8 +140,21 @@ function bindActions() {
     window.location.href = 'login.html';
   });
 
-  document.getElementById('refreshOverview').addEventListener('click', refreshAll);
-  document.getElementById('refreshUsage').addEventListener('click', loadUsageAndLimits);
+  // Improved refresh buttons with visual feedback
+  const refreshButtons = [
+    { id: 'refreshOverview', handler: () => refreshOverviewWithSpinner() },
+    { id: 'refreshUsage', handler: () => refreshUsageWithSpinner() },
+    { id: 'refreshComments', handler: () => refreshCommentsWithSpinner() }
+  ];
+  
+  refreshButtons.forEach(({ id, handler }) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', handler);
+    }
+  });
+
+  document.getElementById('syncLists').addEventListener('click', syncListsFromBackend);
 
   document.getElementById('openExtensions').addEventListener('click', () => {
     chrome.tabs.create({ url: 'chrome://extensions/?id=' + chrome.runtime.id });
@@ -110,11 +183,27 @@ async function refreshAll() {
     STORAGE_KEYS.historyLog,
     STORAGE_KEYS.blockedDomains,
     STORAGE_KEYS.allowedDomains,
-    STORAGE_KEYS.settings
+    STORAGE_KEYS.settings,
+    STORAGE_KEYS.childId
   ]);
 
-  document.getElementById('parentEmail').textContent = data[STORAGE_KEYS.parentEmail] || 'Parent';
-  document.getElementById('childNameDisplay').textContent = data[STORAGE_KEYS.childName] || 'Child';
+  document.getElementById('parentEmail').textContent = data[STORAGE_KEYS.parentEmail] || 'parent@example.com';
+  
+  // Get child name from storage or fetch from API
+  let childName = data[STORAGE_KEYS.childName];
+  if (!childName && data[STORAGE_KEYS.childId]) {
+    // Try to fetch from backend
+    try {
+      const profile = await apiCall('GET', '/api/profile', {});
+      if (profile && profile.children && profile.children.length > 0) {
+        childName = profile.children[0].name;
+        await chrome.storage.local.set({ [STORAGE_KEYS.childName]: childName });
+      }
+    } catch (error) {
+      console.warn('Could not fetch child name from backend');
+    }
+  }
+  document.getElementById('childNameDisplay').textContent = childName || 'My Child';
 
   const blockedLog = data[STORAGE_KEYS.blockedLog] || [];
   const historyLog = data[STORAGE_KEYS.historyLog] || [];
@@ -150,6 +239,91 @@ async function refreshAll() {
   renderLists(blockedDomains, allowedDomains);
   loadSettings(data[STORAGE_KEYS.settings] || DEFAULT_SETTINGS);
   await loadUsageAndLimits();
+  await loadHiddenComments();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REFRESH HELPERS WITH VISUAL FEEDBACK (Spinner)
+// ═══════════════════════════════════════════════════════════════
+
+async function refreshOverviewWithSpinner() {
+  const btn = document.getElementById('refreshOverview');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '🔄 Refreshing...';
+  
+  try {
+    await refreshAll();
+    btn.textContent = '✅ Updated!';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+  } catch (error) {
+    btn.textContent = '❌ Error';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+  }
+}
+
+async function refreshUsageWithSpinner() {
+  const btn = document.getElementById('refreshUsage');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '🔄 Refreshing...';
+  
+  try {
+    await loadUsageAndLimits();
+    btn.textContent = '✅ Updated!';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+  } catch (error) {
+    btn.textContent = '❌ Error';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+  }
+}
+
+async function refreshCommentsWithSpinner() {
+  const btn = document.getElementById('refreshComments');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '🔄 Refreshing...';
+  
+  try {
+    await loadHiddenComments();
+    btn.textContent = '✅ Updated!';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+  } catch (error) {
+    btn.textContent = '❌ Error';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+  }
+}
+
+async function loadOverviewStats() {
+  const data = await chrome.storage.local.get([
+    STORAGE_KEYS.blockedLog,
+    STORAGE_KEYS.historyLog,
+    STORAGE_KEYS.childId
+  ]);
+  
+  const blockedLog = data[STORAGE_KEYS.blockedLog] || [];
+  const historyLog = data[STORAGE_KEYS.historyLog] || [];
+  
+  updateStats(blockedLog, historyLog);
+  renderRecentBlocked(blockedLog);
 }
 
 function updateStats(blockedLog, historyLog) {
@@ -413,6 +587,8 @@ async function loadUsageAndLimits() {
     const usage = usageRes.usage || [];
     const limits = limitsRes.limits || [];
 
+    await chrome.storage.local.set({ siteTimeRules: limits });
+
     renderUsageSummary(usageRes, usage);
     renderUsageTable(usage, limits);
     renderLimitsList(limits);
@@ -549,6 +725,139 @@ function domainMatches(domain, pattern) {
   const cleanDomain = domain.toLowerCase();
   const cleanPattern = pattern.toLowerCase().replace('www.', '');
   return cleanDomain === cleanPattern || cleanDomain.endsWith('.' + cleanPattern);
+}
+
+async function loadHiddenComments() {
+  const childId = await getStorageValue('childId');
+  if (!childId) return;
+
+  try {
+    const response = await apiCall('GET', `/api/comments/hidden/${childId}`, {});
+    renderHiddenComments(response);
+  } catch (error) {
+    console.error('Error loading hidden comments:', error);
+    document.getElementById('commentsContainer').innerHTML = '<div class="info-message">❌ Failed to load comments</div>';
+  }
+}
+
+function renderHiddenComments(data) {
+  const container = document.getElementById('commentsContainer');
+  
+  if (!data.posts || data.posts.length === 0) {
+    container.innerHTML = '<div class="info-message">✅ No filtered comments yet. Great job!</div>';
+    return;
+  }
+
+  let html = `<div class="stats" style="margin-bottom: 20px;">
+    <div class="stat-card">
+      <div class="stat-icon">💬</div>
+      <div class="stat-label">Total Hidden</div>
+      <div class="stat-value">${data.total_comments}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📄</div>
+      <div class="stat-label">Posts Filtered</div>
+      <div class="stat-value">${data.total_posts}</div>
+    </div>
+  </div>`;
+
+  data.posts.forEach(post => {
+    html += `
+      <div class="section" style="margin-bottom: 20px; border: 2px solid #e0e0e0; border-radius: 8px; padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+          <div>
+            <h3 style="margin: 0; font-size: 16px; color: #667eea;">${escapeHtml(post.post_title)}</h3>
+            <div class="small" style="margin-top: 4px; color: #666;">
+              <a href="${escapeHtml(post.post_url)}" target="_blank" style="color: #667eea; text-decoration: none;">
+                🔗 View Post
+              </a>
+              <span style="margin-left: 12px;">📊 ${post.comments_count} comment${post.comments_count > 1 ? 's' : ''} hidden</span>
+            </div>
+          </div>
+        </div>
+        <div style="max-height: 400px; overflow-y: auto;">
+    `;
+
+    post.comments.forEach(comment => {
+      const severityColor = comment.severity === 2 ? '#e74c3c' : comment.severity === 1 ? '#f39c12' : '#95a5a6';
+      const severityLabel = comment.severity === 2 ? 'High' : comment.severity === 1 ? 'Medium' : 'Low';
+      
+      html += `
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid ${severityColor};">
+          <div style="display: flex; justify-content: between; margin-bottom: 8px;">
+            <span style="background: ${severityColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">
+              ${severityLabel} Risk
+            </span>
+            <span style="font-size: 12px; color: #666; margin-left: 12px;">${formatDate(comment.hidden_at)}</span>
+          </div>
+          <div style="background: white; padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 13px; color: #333;">
+            "${escapeHtml(comment.text)}"
+          </div>
+          <div style="font-size: 12px; color: #e74c3c;">
+            🛡️ Reason: ${escapeHtml(comment.reason)}
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function syncListsFromBackend() {
+  try {
+    const childId = await getStorageValue('childId');
+    if (!childId) {
+      alert('Child ID not found. Please logout and login again.');
+      return;
+    }
+
+    // Show loading state
+    const btn = document.getElementById('syncLists');
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Syncing...';
+    btn.disabled = true;
+
+    // Fetch blocklist
+    const blocklistResponse = await apiCall('GET', `/api/blocklist/${childId}`, {});
+    if (blocklistResponse && blocklistResponse.blocklist) {
+      const blockedDomains = blocklistResponse.blocklist;
+      await chrome.storage.local.set({ blockedDomains });
+    }
+
+    // Fetch allowlist
+    const allowlistResponse = await apiCall('GET', `/api/allowlist/${childId}`, {});
+    if (allowlistResponse && allowlistResponse.allowlist) {
+      const allowedDomains = allowlistResponse.allowlist;
+      await chrome.storage.local.set({ allowedDomains });
+    }
+
+    // Fetch time limits
+    const limitsResponse = await apiCall('GET', `/api/limits/${childId}`, {});
+    if (limitsResponse && limitsResponse.limits) {
+      const siteTimeRules = limitsResponse.limits;
+      await chrome.storage.local.set({ siteTimeRules });
+    }
+
+    // Refresh display
+    await refreshAll();
+    await loadUsageAndLimits();
+
+    btn.textContent = originalText;
+    btn.disabled = false;
+    alert('✅ Lists synced successfully from backend!');
+  } catch (error) {
+    console.error('Error syncing lists:', error);
+    alert(`❌ Sync failed: ${error.message}`);
+    const btn = document.getElementById('syncLists');
+    btn.textContent = '🔄 Sync from Backend';
+    btn.disabled = false;
+  }
 }
 
 async function clearAllData() {

@@ -32,6 +32,7 @@
         <button class="nav-btn active" data-tab="overview">📊 Overview</button>
         <button class="nav-btn" data-tab="history">🧾 All Visits</button>
         <button class="nav-btn" data-tab="blocked">🚫 Blocked Sites</button>
+        <button class="nav-btn" data-tab="comments">💬 Hidden Comments</button>
         <button class="nav-btn" data-tab="usage">⏱️ Usage & Limits</button>
         <button class="nav-btn" data-tab="lists">📋 Manage Lists</button>
         <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
@@ -198,10 +199,30 @@
         </div>
       </div>
 
+      <!-- Hidden Comments -->
+      <div class="tab" id="comments">
+        <h1>Hidden Comments</h1>
+        <p class="subtitle">Comments filtered by SafeGuard's AI</p>
+
+        <div class="section">
+          <div class="section-header">
+            <h2>Filtered Comments by Post</h2>
+            <button id="refreshComments" class="btn btn-ghost">Refresh</button>
+          </div>
+          <div id="commentsContainer">
+            <div class="info-message">Loading hidden comments...</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Manage Lists -->
       <div class="tab" id="lists">
         <h1>Manage Lists</h1>
         <p class="subtitle">Block any site (even safe ones like Facebook) or allow trusted sites</p>
+        
+        <div class="toolbar">
+          <button id="syncLists" class="btn btn-primary">🔄 Sync from Backend</button>
+        </div>
 
         <div class="grid-2">
           <div class="section">

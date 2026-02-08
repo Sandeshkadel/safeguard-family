@@ -13,6 +13,7 @@ const PAGES = {
 document.addEventListener('DOMContentLoaded', async () => {
   await loadStatus();
   setupEventListeners();
+  await loadFilterToggle();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -161,6 +162,46 @@ async function hashPassword(password) {
 
 function showSettings() {
   chrome.tabs.create({ url: chrome.runtime.getURL(PAGES.login) });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMMENT FILTER TOGGLE
+// ═══════════════════════════════════════════════════════════════
+
+async function loadFilterToggle() {
+  const toggle = document.getElementById('filterToggle');
+  const statusText = document.getElementById('filterStatus');
+  
+  if (!toggle || !statusText) return;
+  
+  // Load saved state
+  const data = await chrome.storage.local.get(['filterEnabled']);
+  const isEnabled = data.filterEnabled !== false;
+  
+  toggle.checked = isEnabled;
+  statusText.textContent = isEnabled ? 'Enabled' : 'Disabled';
+  statusText.style.color = isEnabled ? '#48bb78' : '#e53e3e';
+  
+  // Handle toggle change
+  toggle.addEventListener('change', async () => {
+    const enabled = toggle.checked;
+    
+    // Save state
+    await chrome.storage.local.set({ filterEnabled: enabled });
+    
+    // Update UI
+    statusText.textContent = enabled ? 'Enabled' : 'Disabled';
+    statusText.style.color = enabled ? '#48bb78' : '#e53e3e';
+    
+    // Notify all tabs
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'toggleFilter',
+        enabled: enabled
+      }).catch(() => {});  // Ignore errors from tabs without content script
+    }
+  });
 }
 
 console.log('[SafeGuard] Popup loaded');

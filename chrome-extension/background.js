@@ -27,8 +27,8 @@ const CATEGORY_KEYWORDS = {
     Malware: ['malware', 'virus', 'phishing', 'ransomware', 'trojan', 'spyware']
 };
 
-const USAGE_TICK_MS = 15000;
-const USAGE_FLUSH_SECONDS = 60;
+const USAGE_TICK_MS = 5000;    // Track every 5 seconds (was 15) - real-time tracking
+const USAGE_FLUSH_SECONDS = 20; // Sync every 20 seconds (was 60) - faster backend updates
 const DEFAULT_COOLDOWN_HOURS = 24;
 
 let activeSession = {
@@ -613,34 +613,44 @@ async function checkTimeLimit(domain) {
     const rule = rules.find(item => isDomainMatched(domain, item.domain));
     if (!rule) return { blocked: false };
 
+    // Permanent block - always block
     if (rule.permanent_block) {
+        console.log(`[SafeGuard] ⏱️ Time limit: ${domain} - PERMANENT BLOCK`);
         return { blocked: true, reason: 'permanent', rule };
     }
 
+    // Check cooldown period
     if (rule.blocked_until) {
         const blockedUntil = new Date(rule.blocked_until);
         if (!isNaN(blockedUntil.getTime()) && blockedUntil.getTime() > Date.now()) {
+            console.log(`[SafeGuard] ⏱️ Time limit: ${domain} - IN COOLDOWN until ${blockedUntil.toISOString()}`);
             return { blocked: true, reason: 'cooldown', blockedUntil: blockedUntil.toISOString(), rule };
         }
     }
 
+    // Check daily time limit
     const limitMinutes = Number(rule.daily_limit_minutes || 0);
     if (limitMinutes <= 0) {
         return { blocked: false, rule };
     }
 
     const usedSeconds = await getUsageSecondsToday(domain);
-    if (usedSeconds >= limitMinutes * 60) {
+    const limitSeconds = limitMinutes * 60;
+    
+    console.log(`[SafeGuard] ⏱️ Time limit check: ${domain} - Used: ${usedSeconds}s / Limit: ${limitSeconds}s`);
+    
+    if (usedSeconds >= limitSeconds) {
         const cooldownHours = Number(rule.cooldown_hours || DEFAULT_COOLDOWN_HOURS);
         const blockedUntil = new Date(Date.now() + cooldownHours * 60 * 60 * 1000).toISOString();
         await updateRuleInStorage(rule.id, { blocked_until: blockedUntil });
         await updateTimeRuleBackend(rule, { blocked_until: blockedUntil });
+        console.log(`[SafeGuard] 🚫 Time limit: ${domain} - LIMIT REACHED! Blocked until ${blockedUntil}`);
         return { blocked: true, reason: 'limit-reached', blockedUntil, rule };
     }
 
     return {
         blocked: false,
-        remainingSeconds: Math.max(0, limitMinutes * 60 - usedSeconds),
+        remainingSeconds: Math.max(0, limitSeconds - usedSeconds),
         rule
     };
 }
@@ -648,8 +658,38 @@ async function checkTimeLimit(domain) {
 async function flushPendingUsage() {
     if (!activeSession.domain || activeSession.pendingSeconds <= 0) return;
     const durationSeconds = Math.round(activeSession.pendingSeconds);
+    const domain = activeSession.domain;
+    const url = activeSession.url;
     activeSession.pendingSeconds = 0;
-    await logHistoryToBackend(activeSession.url, activeSession.domain, 'SAFE', durationSeconds);
+    
+    // Log to backend with activity type
+    try {
+        if (!sessionData.childId) return;
+        
+        const tokenData = await chrome.storage.local.get('authToken');
+        const authToken = tokenData.authToken;
+        if (!authToken) return;
+        
+        await fetch(`${sessionData.backendUrl}/logs/history`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                child_id: sessionData.childId,
+                type: 'page_view',
+                domain: domain,
+                title: domain,
+                duration: durationSeconds,
+                flagged: false
+            })
+        });
+        
+        console.log(`[SafeGuard] ✓ Usage logged: ${domain} - ${durationSeconds}s`);
+    } catch (error) {
+        console.error('[SafeGuard] Usage flush error:', error);
+    }
 }
 
 async function endActiveSession() {
@@ -715,9 +755,22 @@ async function trackActiveUsageTick() {
     activeSession.lastTickAt = now;
     await addUsageSeconds(activeSession.domain, elapsedSeconds);
     activeSession.pendingSeconds += elapsedSeconds;
+    
+    console.log(`[SafeGuard] ⏱️ Tracking: ${activeSession.domain} +${elapsedSeconds}s (total pending: ${activeSession.pendingSeconds}s)`);
 
     if (activeSession.pendingSeconds >= USAGE_FLUSH_SECONDS) {
         await flushPendingUsage();
+    }
+    
+    // Check if time limit reached during active session
+    const timeLimit = await checkTimeLimit(activeSession.domain);
+    if (timeLimit.blocked) {
+        console.log(`[SafeGuard] 🚫 Time limit reached during session: ${activeSession.domain}`);
+        // Block the current tab
+        if (activeSession.tabId) {
+            await blockSite(activeSession.tabId, activeSession.url, activeSession.domain, 'Time Limit', timeLimit);
+        }
+        await endActiveSession();
     }
 }
 

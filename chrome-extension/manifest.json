@@ -29,6 +29,16 @@
       "matches": ["https://*/*", "http://*/*"],
       "js": ["content.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://*.facebook.com/*",
+        "*://*.fb.com/*",
+        "*://facebook.com/*",
+        "*://fb.com/*"
+      ],
+      "js": ["facebook-filter.js"],
+      "run_at": "document_idle"
     }
   ],
   

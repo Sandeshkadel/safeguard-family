@@ -244,6 +244,41 @@
         This is a <strong>parental control system</strong>, not spyware. It monitors only visited URLs to protect children from harmful content. It does NOT log keystrokes, read messages, or capture private data. The child should be aware this extension is installed.
       </div>
     </div>
+
+    <div class="features" style="margin-top: 0;">
+      <h3>Already Have an Account?</h3>
+      <p class="subtitle" style="margin-bottom: 15px;">Log in and continue without creating a new account.</p>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">Parent Email</label>
+          <input
+            type="email"
+            id="loginEmail"
+            placeholder="parent@example.com"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Parent Password</label>
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="Your password"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="loginChildName">Child's Name (optional)</label>
+          <input
+            type="text"
+            id="loginChildName"
+            placeholder="e.g., Sarah"
+          >
+          <div class="help-text">Used only if this account has no child yet</div>
+        </div>
+        <button type="submit" class="button" id="loginButton">Login & Open Dashboard</button>
+      </form>
+    </div>
     
     <form id="setupForm">
       <div class="form-group">

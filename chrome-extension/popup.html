@@ -173,6 +173,51 @@
     .locked-notice strong {
       color: #d68910;
     }
+    
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 26px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+    }
   </style>
 </head>
 <body>
@@ -199,6 +244,17 @@
     <div class="info-card">
       <div class="info-label">Sites Blocked Today</div>
       <div class="info-value" id="blockedCount">Loading...</div>
+    </div>
+    
+    <div class="info-card" style="display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <div class="info-label">Facebook Comment Filter</div>
+        <div class="info-value" id="filterStatus">Enabled</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="filterToggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
     </div>
     
     <div class="divider"></div>
