@@ -3,8 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SafeGuard Family - Local Dashboard</title>
-  <link rel="stylesheet" href="dashboard.css">
+  <title>SafeGuard Family - Dashboard</title>
+  <link rel="stylesheet" href="/assets/dashboard.css">
+  <style>
+    /* Additional styles for web dashboard */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 18px;
+      color: #718096;
+    }
+    .child-selector {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f7fafc;
+      border-radius: 8px;
+    }
+    .child-selector select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    .create-child-btn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .create-child-btn:hover {
+      background: #5568d3;
+    }
+  </style>
 </head>
 <body>
   <header class="topbar">
@@ -12,7 +47,7 @@
       <span class="brand-icon">🛡️</span>
       <div>
         <div class="brand-title">SafeGuard Family</div>
-        <div class="brand-subtitle">Database-Powered Dashboard</div>
+        <div class="brand-subtitle">Web Dashboard</div>
       </div>
     </div>
     <div class="user">
@@ -26,6 +61,10 @@
       <div class="child-card">
         <div class="child-label">Protected Child</div>
         <div class="child-name" id="childNameDisplay">Loading...</div>
+        <div class="child-selector" id="childSelector" style="display: none;">
+          <select id="childSelect"></select>
+          <button class="create-child-btn" id="createChildBtn">Create New Child</button>
+        </div>
       </div>
 
       <nav class="nav">
@@ -34,23 +73,14 @@
         <button class="nav-btn" data-tab="blocked">🚫 Blocked Sites</button>
         <button class="nav-btn" data-tab="usage">⏱️ Usage & Limits</button>
         <button class="nav-btn" data-tab="lists">📋 Manage Lists</button>
-        <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
       </nav>
-
-      <div class="side-note">
-        <div class="note-title">Incognito Support</div>
-        <div class="note-text">
-          Enable "Allow in incognito" in Chrome extensions page.
-        </div>
-        <button id="openExtensions" class="btn btn-secondary">Open Extensions</button>
-      </div>
     </aside>
 
     <section class="content">
       <!-- Overview -->
       <div class="tab active" id="overview">
         <h1>Overview</h1>
-        <p class="subtitle">Live local stats from this device</p>
+        <p class="subtitle">Monitor your child's online activity</p>
 
         <div class="stats">
           <div class="stat-card">
@@ -70,24 +100,24 @@
           </div>
           <div class="stat-card">
             <div class="stat-icon">📊</div>
-            <div class="stat-label">Top Category</div>
-            <div class="stat-value" id="topCategory">-</div>
+            <div class="stat-label">Active Devices</div>
+            <div class="stat-value" id="totalDevices">0</div>
           </div>
         </div>
 
         <div class="section">
           <div class="section-header">
-            <h2>Recent Blocked Sites</h2>
+            <h2>Recent Activity</h2>
             <button id="refreshOverview" class="btn btn-ghost">Refresh</button>
           </div>
           <div class="table">
             <div class="table-row table-head">
               <div>Time</div>
               <div>URL</div>
-              <div>Category</div>
-              <div>Action</div>
+              <div>Device</div>
+              <div>Status</div>
             </div>
-            <div id="recentBlockedTable"></div>
+            <div id="recentActivityTable"></div>
           </div>
         </div>
       </div>
@@ -95,20 +125,19 @@
       <!-- All Visits -->
       <div class="tab" id="history">
         <h1>All Visits</h1>
-        <p class="subtitle">Every URL opened on this device</p>
+        <p class="subtitle">Complete browsing history</p>
 
         <div class="toolbar">
           <input id="historySearch" class="input" type="text" placeholder="Search URL or domain...">
-          <button id="exportHistory" class="btn btn-secondary">Export CSV</button>
-          <button id="clearHistory" class="btn btn-danger">Clear History</button>
+          <button id="refreshHistory" class="btn btn-secondary">Refresh</button>
         </div>
 
         <div class="table">
           <div class="table-row table-head">
             <div>Date & Time</div>
             <div>URL</div>
-            <div>Category</div>
-            <div>Action</div>
+            <div>Device</div>
+            <div>Duration</div>
           </div>
           <div id="historyTable"></div>
         </div>
@@ -131,6 +160,7 @@
             <option value="Malware">Malware</option>
             <option value="Custom">Custom</option>
           </select>
+          <button id="refreshBlocked" class="btn btn-secondary">Refresh</button>
         </div>
 
         <div class="table">
@@ -138,7 +168,7 @@
             <div>Date & Time</div>
             <div>URL</div>
             <div>Category</div>
-            <div>Action</div>
+            <div>Device</div>
           </div>
           <div id="blockedTable"></div>
         </div>
@@ -147,7 +177,7 @@
       <!-- Usage & Limits -->
       <div class="tab" id="usage">
         <h1>Usage & Limits</h1>
-        <p class="subtitle">Daily time usage and per-site time limits</p>
+        <p class="subtitle">Daily usage by website with time limits</p>
 
         <div class="stats">
           <div class="stat-card">
@@ -170,7 +200,7 @@
         <div class="section">
           <div class="section-header">
             <h2>Per-Site Usage</h2>
-            <button id="refreshUsage" class="btn btn-ghost">Refresh</button>
+            <button id="refreshUsage" class="btn btn-secondary">Refresh</button>
           </div>
           <div class="table">
             <div class="table-row table-head">
@@ -185,7 +215,7 @@
 
         <div class="section">
           <h2>Set Time Limit</h2>
-          <div class="form-row" style="grid-template-columns: 1fr 140px 160px 90px;">
+          <div style="display: grid; grid-template-columns: 1fr 140px 170px 100px; gap: 10px; margin-top: 10px;">
             <input id="limitDomain" class="input" type="text" placeholder="example.com">
             <input id="limitMinutes" class="input" type="number" min="0" step="5" placeholder="Minutes">
             <label class="toggle" style="margin: 0;">
@@ -194,92 +224,42 @@
             </label>
             <button id="addLimit" class="btn btn-primary">Save</button>
           </div>
-          <div id="limitsList" class="list"></div>
+          <div id="limitsList" style="margin-top: 20px;"></div>
         </div>
       </div>
 
       <!-- Manage Lists -->
       <div class="tab" id="lists">
         <h1>Manage Lists</h1>
-        <p class="subtitle">Block any site (even safe ones like Facebook) or allow trusted sites</p>
-
-        <div class="grid-2">
-          <div class="section">
-            <h2>🚫 Custom Blocklist</h2>
-            <p class="small">Sites here are always blocked.</p>
-            <div class="form-row">
-              <input id="blockDomain" class="input" type="text" placeholder="facebook.com">
-              <select id="blockCategory" class="select">
-                <option value="Custom">Custom</option>
-                <option value="Adult">Adult</option>
-                <option value="Gambling">Gambling</option>
-                <option value="Violence">Violence</option>
-                <option value="Drugs">Drugs</option>
-                <option value="Hate">Hate</option>
-                <option value="Malware">Malware</option>
-              </select>
-              <button id="addBlock" class="btn btn-primary">Add</button>
-            </div>
-            <div id="blocklist" class="list"></div>
-          </div>
-
-          <div class="section">
-            <h2>✅ Custom Allowlist</h2>
-            <p class="small">Sites here are always allowed.</p>
-            <div class="form-row">
-              <input id="allowDomain" class="input" type="text" placeholder="school.edu">
-              <button id="addAllow" class="btn btn-primary">Add</button>
-            </div>
-            <div id="allowlist" class="list"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings -->
-      <div class="tab" id="settings">
-        <h1>Settings</h1>
-        <p class="subtitle">Choose what categories to block</p>
+        <p class="subtitle">Block or allow specific websites</p>
 
         <div class="section">
-          <div class="toggle">
-            <input type="checkbox" id="blockAdult">
-            <label for="blockAdult">Block Adult Content</label>
+          <h2>Block Custom Domain</h2>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input id="blockDomain" class="input" type="text" placeholder="example.com" style="flex: 1;">
+            <select id="blockCategory" class="select">
+              <option value="Custom">Custom</option>
+              <option value="Adult">Adult</option>
+              <option value="Gambling">Gambling</option>
+              <option value="Violence">Violence</option>
+            </select>
+            <button id="addBlock" class="btn btn-primary">Add Block</button>
           </div>
-          <div class="toggle">
-            <input type="checkbox" id="blockGambling">
-            <label for="blockGambling">Block Gambling</label>
-          </div>
-          <div class="toggle">
-            <input type="checkbox" id="blockViolence">
-            <label for="blockViolence">Block Violence</label>
-          </div>
-          <div class="toggle">
-            <input type="checkbox" id="blockDrugs">
-            <label for="blockDrugs">Block Drugs</label>
-          </div>
-          <div class="toggle">
-            <input type="checkbox" id="blockHate">
-            <label for="blockHate">Block Hate</label>
-          </div>
-          <div class="toggle">
-            <input type="checkbox" id="blockMalware">
-            <label for="blockMalware">Block Malware/Phishing</label>
-          </div>
-          <div class="toggle">
-            <input type="checkbox" id="logAllVisits">
-            <label for="logAllVisits">Log All Visits (History)</label>
-          </div>
+          <div id="blocklist" style="margin-top: 20px;"></div>
         </div>
 
-        <div class="section">
-          <button id="saveSettings" class="btn btn-primary">Save Settings</button>
-          <button id="clearAllData" class="btn btn-danger">Delete All Data</button>
+        <div class="section" style="margin-top: 30px;">
+          <h2>Allow Trusted Domain</h2>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input id="allowDomain" class="input" type="text" placeholder="khanacademy.org" style="flex: 1;">
+            <button id="addAllow" class="btn btn-primary">Add Allow</button>
+          </div>
+          <div id="allowlist" style="margin-top: 20px;"></div>
         </div>
       </div>
     </section>
   </main>
 
-  <script src="config.js"></script>
-  <script src="dashboard.js"></script>
+  <script src="/assets/web-dashboard.js"></script>
 </body>
 </html>

@@ -27,19 +27,6 @@ const CATEGORY_KEYWORDS = {
     Malware: ['malware', 'virus', 'phishing', 'ransomware', 'trojan', 'spyware']
 };
 
-const USAGE_TICK_MS = 15000;
-const USAGE_FLUSH_SECONDS = 60;
-const DEFAULT_COOLDOWN_HOURS = 24;
-
-let activeSession = {
-    tabId: null,
-    url: '',
-    domain: '',
-    startedAt: 0,
-    lastTickAt: 0,
-    pendingSeconds: 0
-};
-
 // ═══════════════════════════════════════════════════════════════
 // SERVICE WORKER INITIALIZATION
 // ═══════════════════════════════════════════════════════════════
@@ -226,15 +213,6 @@ async function registerDevice() {
 
 async function classifyUrl(url, domain) {
     try {
-        const timeLimit = await checkTimeLimit(domain);
-        if (timeLimit.blocked) {
-            return {
-                category: 'Time Limit',
-                blocked: true,
-                timeLimit
-            };
-        }
-
         // Check allowlist first
         const allowedData = await chrome.storage.local.get('allowedDomains');
         if (allowedData.allowedDomains && isDomainInList(domain, allowedData.allowedDomains)) {
@@ -317,7 +295,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
         if (classification.blocked && !classification.allowed) {
             console.log(`[SafeGuard] 🛑 BLOCKING: ${domain}`);
             // Block the site
-            await blockSite(details.tabId, url, domain, classification.category, classification.timeLimit || null);
+            await blockSite(details.tabId, url, domain, classification.category);
         }
     } catch (error) {
         console.error('[SafeGuard] Navigation error:', error);
@@ -352,11 +330,11 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
         if (classification.blocked && !classification.allowed) {
             console.log(`[SafeGuard] 🛑 BLOCKING (committed): ${domain}`);
             // Block the site immediately
-            await blockSite(details.tabId, url, domain, classification.category, classification.timeLimit || null);
+            await blockSite(details.tabId, url, domain, classification.category);
         } else {
             // LOG ALL VISITS TO HISTORY (not just blocked ones!)
             console.log(`[SafeGuard] ✓ LOGGING VISIT: ${domain}`);
-            await logHistoryToBackend(url, domain, classification.category, 0);
+            await logHistoryToBackend(url, domain, classification.category);
         }
     } catch (error) {
         console.error('[SafeGuard] Committed navigation error:', error);
@@ -367,21 +345,17 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
 // BLOCKING LOGIC
 // ═══════════════════════════════════════════════════════════════
 
-async function blockSite(tabId, url, domain, category, timeLimit = null) {
+async function blockSite(tabId, url, domain, category) {
     try {
         // Log to backend
         await logBlockToBackend(url, domain, category);
         
         // Log locally
-        const action = timeLimit ? 'TIME_LIMIT' : 'BLOCKED';
-        await logBlockLocal(url, domain, category, action);
+        await logBlockLocal(url, domain, category);
         
         // Redirect to blocked page
-        let blockedPageUrl = chrome.runtime.getURL('blocked-page.html') + 
+        const blockedPageUrl = chrome.runtime.getURL('blocked-page.html') + 
             `?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}&category=${encodeURIComponent(category)}`;
-        if (timeLimit && timeLimit.blockedUntil) {
-            blockedPageUrl += `&blockedUntil=${encodeURIComponent(timeLimit.blockedUntil)}`;
-        }
         
         chrome.tabs.update(tabId, { url: blockedPageUrl });
         console.log(`[SafeGuard] BLOCKED: ${domain}`);
@@ -390,7 +364,7 @@ async function blockSite(tabId, url, domain, category, timeLimit = null) {
     }
 }
 
-async function logBlockLocal(url, domain, category, action) {
+async function logBlockLocal(url, domain, category) {
     try {
         const data = await chrome.storage.local.get('blockedLog');
         const blockedLog = data.blockedLog || [];
@@ -399,7 +373,6 @@ async function logBlockLocal(url, domain, category, action) {
             url,
             domain,
             category,
-            action: action || 'BLOCKED',
             timestamp: new Date().toISOString()
         });
         
@@ -451,7 +424,7 @@ async function logBlockToBackend(url, domain, category) {
     }
 }
 
-async function logHistoryToBackend(url, domain, category = 'SAFE', durationSeconds = 0) {
+async function logHistoryToBackend(url, domain, category = 'SAFE') {
     try {
         if (!sessionData.childId || !sessionData.deviceId) {
             console.warn('[SafeGuard] Cannot log history: missing child_id or device_id');
@@ -462,7 +435,7 @@ async function logHistoryToBackend(url, domain, category = 'SAFE', durationSecon
             url,
             domain,
             page_title: domain,
-            duration: durationSeconds,
+            duration: 0,
             timestamp: new Date().toISOString()
         };
         
@@ -489,7 +462,7 @@ async function logHistoryToBackend(url, domain, category = 'SAFE', durationSecon
                 url,
                 domain,
                 page_title: domain,
-                duration: durationSeconds
+                duration: 0
             })
         });
         
@@ -523,233 +496,6 @@ async function saveHistoryLocally(record) {
         console.error('[SafeGuard] Error saving to local storage:', error);
     }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// TIME LIMITS & USAGE TRACKING
-// ═══════════════════════════════════════════════════════════════
-
-function getTodayKey() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function isTrackableUrl(url) {
-    if (!url) return false;
-    if (url.startsWith('chrome://') || url.startsWith('about:')) return false;
-    if (url.startsWith('chrome-extension://')) return false;
-    return url.startsWith('http://') || url.startsWith('https://');
-}
-
-async function addUsageSeconds(domain, seconds) {
-    if (!domain || seconds <= 0) return;
-
-    const dateKey = getTodayKey();
-    const data = await chrome.storage.local.get('usageByDate');
-    const usageByDate = data.usageByDate || {};
-    const dayUsage = usageByDate[dateKey] || {};
-    const normalizedDomain = domain.toLowerCase();
-    dayUsage[normalizedDomain] = (dayUsage[normalizedDomain] || 0) + seconds;
-    usageByDate[dateKey] = dayUsage;
-    await chrome.storage.local.set({ usageByDate });
-}
-
-async function getUsageSecondsToday(domain) {
-    if (!domain) return 0;
-
-    const dateKey = getTodayKey();
-    const data = await chrome.storage.local.get(['usageByDate', 'serverUsageToday']);
-    const usageByDate = data.usageByDate || {};
-    const serverUsageToday = data.serverUsageToday || {};
-    const normalizedDomain = domain.toLowerCase();
-    const localSeconds = (usageByDate[dateKey] || {})[normalizedDomain] || 0;
-    const serverSeconds = (serverUsageToday[dateKey] || {})[normalizedDomain] || 0;
-    return localSeconds + serverSeconds;
-}
-
-async function updateRuleInStorage(ruleId, updates) {
-    const data = await chrome.storage.local.get('siteTimeRules');
-    const rules = data.siteTimeRules || [];
-    const updatedRules = rules.map(rule => {
-        if (rule.id === ruleId) {
-            return { ...rule, ...updates };
-        }
-        return rule;
-    });
-    await chrome.storage.local.set({ siteTimeRules: updatedRules });
-}
-
-async function updateTimeRuleBackend(rule, updates) {
-    try {
-        const tokenData = await chrome.storage.local.get('authToken');
-        const authToken = tokenData.authToken;
-        if (!authToken) return;
-
-        await fetch(`${sessionData.backendUrl}/limits`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: JSON.stringify({
-                child_id: sessionData.childId,
-                domain: rule.domain,
-                daily_limit_minutes: rule.daily_limit_minutes,
-                cooldown_hours: rule.cooldown_hours || DEFAULT_COOLDOWN_HOURS,
-                permanent_block: rule.permanent_block,
-                blocked_until: updates.blocked_until || rule.blocked_until || null
-            })
-        });
-    } catch (error) {
-        console.warn('[SafeGuard] Failed to update time rule:', error);
-    }
-}
-
-async function checkTimeLimit(domain) {
-    const data = await chrome.storage.local.get('siteTimeRules');
-    const rules = data.siteTimeRules || [];
-    const rule = rules.find(item => isDomainMatched(domain, item.domain));
-    if (!rule) return { blocked: false };
-
-    if (rule.permanent_block) {
-        return { blocked: true, reason: 'permanent', rule };
-    }
-
-    if (rule.blocked_until) {
-        const blockedUntil = new Date(rule.blocked_until);
-        if (!isNaN(blockedUntil.getTime()) && blockedUntil.getTime() > Date.now()) {
-            return { blocked: true, reason: 'cooldown', blockedUntil: blockedUntil.toISOString(), rule };
-        }
-    }
-
-    const limitMinutes = Number(rule.daily_limit_minutes || 0);
-    if (limitMinutes <= 0) {
-        return { blocked: false, rule };
-    }
-
-    const usedSeconds = await getUsageSecondsToday(domain);
-    if (usedSeconds >= limitMinutes * 60) {
-        const cooldownHours = Number(rule.cooldown_hours || DEFAULT_COOLDOWN_HOURS);
-        const blockedUntil = new Date(Date.now() + cooldownHours * 60 * 60 * 1000).toISOString();
-        await updateRuleInStorage(rule.id, { blocked_until: blockedUntil });
-        await updateTimeRuleBackend(rule, { blocked_until: blockedUntil });
-        return { blocked: true, reason: 'limit-reached', blockedUntil, rule };
-    }
-
-    return {
-        blocked: false,
-        remainingSeconds: Math.max(0, limitMinutes * 60 - usedSeconds),
-        rule
-    };
-}
-
-async function flushPendingUsage() {
-    if (!activeSession.domain || activeSession.pendingSeconds <= 0) return;
-    const durationSeconds = Math.round(activeSession.pendingSeconds);
-    activeSession.pendingSeconds = 0;
-    await logHistoryToBackend(activeSession.url, activeSession.domain, 'SAFE', durationSeconds);
-}
-
-async function endActiveSession() {
-    if (!activeSession.domain) return;
-    const now = Date.now();
-    const elapsedSeconds = Math.max(0, Math.round((now - (activeSession.lastTickAt || now)) / 1000));
-    if (elapsedSeconds > 0) {
-        await addUsageSeconds(activeSession.domain, elapsedSeconds);
-        activeSession.pendingSeconds += elapsedSeconds;
-    }
-    await flushPendingUsage();
-
-    activeSession = {
-        tabId: null,
-        url: '',
-        domain: '',
-        startedAt: 0,
-        lastTickAt: 0,
-        pendingSeconds: 0
-    };
-}
-
-async function setActiveSession(tabId, url) {
-    if (!sessionData.extensionEnabled) return;
-    if (!isTrackableUrl(url)) {
-        await endActiveSession();
-        return;
-    }
-
-    let domain = '';
-    try {
-        domain = new URL(url).hostname;
-    } catch {
-        return;
-    }
-
-    if (activeSession.domain && activeSession.domain !== domain) {
-        await endActiveSession();
-    }
-
-    if (!activeSession.domain) {
-        activeSession = {
-            tabId,
-            url,
-            domain,
-            startedAt: Date.now(),
-            lastTickAt: Date.now(),
-            pendingSeconds: 0
-        };
-    } else {
-        activeSession.url = url;
-        activeSession.tabId = tabId;
-    }
-}
-
-async function trackActiveUsageTick() {
-    if (!sessionData.extensionEnabled) return;
-    if (!activeSession.domain) return;
-    const now = Date.now();
-    const elapsedSeconds = Math.max(0, Math.round((now - activeSession.lastTickAt) / 1000));
-    if (elapsedSeconds <= 0) return;
-
-    activeSession.lastTickAt = now;
-    await addUsageSeconds(activeSession.domain, elapsedSeconds);
-    activeSession.pendingSeconds += elapsedSeconds;
-
-    if (activeSession.pendingSeconds >= USAGE_FLUSH_SECONDS) {
-        await flushPendingUsage();
-    }
-}
-
-// Track active tab usage
-chrome.tabs.onActivated.addListener(async (info) => {
-    try {
-        const tab = await chrome.tabs.get(info.tabId);
-        await setActiveSession(info.tabId, tab.url || '');
-    } catch (error) {
-        console.error('[SafeGuard] Tab activation error:', error);
-    }
-});
-
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.status !== 'complete') return;
-    if (!tab.active) return;
-    await setActiveSession(tabId, tab.url || '');
-});
-
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-    if (activeSession.tabId === tabId) {
-        await endActiveSession();
-    }
-});
-
-chrome.windows.onFocusChanged.addListener(async (windowId) => {
-    if (windowId === chrome.windows.WINDOW_ID_NONE) {
-        await endActiveSession();
-    }
-});
-
-setInterval(trackActiveUsageTick, USAGE_TICK_MS);
 
 // ═══════════════════════════════════════════════════════════════
 // MESSAGE HANDLING
@@ -829,23 +575,6 @@ async function syncBlocklistAndAllowlist() {
             const data = await allowlistResponse.json();
             const allowedDomains = data.allowlist || [];
             await chrome.storage.local.set({ allowedDomains });
-        }
-
-        // Sync time limits
-        const limitsResponse = await fetch(`${sessionData.backendUrl}/limits/${sessionData.childId}`, { headers });
-        if (limitsResponse.ok) {
-            const data = await limitsResponse.json();
-            const siteTimeRules = data.limits || [];
-            await chrome.storage.local.set({ siteTimeRules });
-        }
-
-        // Sync usage summary (today)
-        const usageResponse = await fetch(`${sessionData.backendUrl}/usage/${sessionData.childId}?days=1`, { headers });
-        if (usageResponse.ok) {
-            const data = await usageResponse.json();
-            const dateKey = getTodayKey();
-            const usageMap = data.usage_map || {};
-            await chrome.storage.local.set({ serverUsageToday: { [dateKey]: usageMap } });
         }
     } catch (error) {
         console.error('[SafeGuard] Sync error:', error);

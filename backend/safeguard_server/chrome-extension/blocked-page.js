@@ -9,7 +9,6 @@ const blockedUrl = params.get('url') || 'Unknown';
 const domain = params.get('domain') || 'Unknown';
 const category = params.get('category') || 'Other';
 const timestamp = params.get('timestamp') || Date.now();
-const blockedUntil = params.get('blockedUntil');
 
 // Button functions with improved reliability
 function goBack() {
@@ -45,8 +44,7 @@ function initializePage() {
 
     // Create category badge
     const categoryBadge = document.createElement('span');
-    const categoryClass = category.toLowerCase().replace(/\s+/g, '-');
-    categoryBadge.className = `category-badge category-${categoryClass}`;
+    categoryBadge.className = `category-badge category-${category.toLowerCase()}`;
     categoryBadge.textContent = category;
     document.getElementById('category-badge').innerHTML = '';
     document.getElementById('category-badge').appendChild(categoryBadge);
@@ -60,21 +58,10 @@ function initializePage() {
         'Hate': 'This website contains hateful content that promotes discrimination.',
         'Malware': 'This website has been identified as potentially harmful or dangerous.',
         'Other': 'This website has been blocked by parental controls.',
-        'Custom': 'This website has been blocked by custom parental controls.',
-        'Time Limit': 'This website is temporarily blocked because the time limit was reached.'
+        'Custom': 'This website has been blocked by custom parental controls.'
     };
 
     document.getElementById('reason-text').textContent = reasonTexts[category] || reasonTexts['Other'];
-
-    if (blockedUntil) {
-        const unblockRow = document.getElementById('unblock-row');
-        const unblockTime = document.getElementById('blocked-until');
-        const parsed = new Date(blockedUntil);
-        if (!isNaN(parsed.getTime())) {
-            unblockTime.textContent = parsed.toLocaleString();
-            unblockRow.style.display = 'flex';
-        }
-    }
     
     // Add click feedback to buttons
     const buttons = document.querySelectorAll('.btn');

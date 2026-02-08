@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .app-container {
+            display: flex;
+            height: 600px;
+            width: 100%;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            overflow-y: auto;
+            border-right: 1px solid #f0f0f0;
+        }
+
+        .sidebar-header {
+            padding: 0 20px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .nav-tabs {
+            list-style: none;
+        }
+
+        .nav-tabs li {
+            margin: 0;
+        }
+
+        .nav-tabs button {
+            width: 100%;
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: left;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-tabs button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-tabs button.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left-color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .top-bar {
+            background: white;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .top-bar h1 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .user-menu {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .user-badge {
+            background: #f0f0f0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .user-badge.parent {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .user-badge.child {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .btn-logout {
+            padding: 8px 16px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-logout:hover {
+            background: #ff5252;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-card .detail {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        thead {
+            background: #f5f7fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge.blocked {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge.tracking {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .scrollable {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        /* Parent Dashboard Specific */
+        .children-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-item {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .child-item:hover {
+            background: #f9f9f9;
+            border-color: #667eea;
+        }
+
+        .child-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .child-status {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .chart {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>🛡️ SafeGuard</h2>
+                <p id="userTypeLabel">Child Mode</p>
+            </div>
+
+            <ul class="nav-tabs" id="navTabs">
+                <!-- Tabs will be populated by JS -->
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <h1 id="pageTitle">Dashboard</h1>
+                <div class="user-menu">
+                    <span class="user-badge" id="userBadge"></span>
+                    <button class="btn-logout" onclick="handleLogout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content">
+                <div id="content-parent" class="tab-content"></div>
+                <div id="content-child" class="tab-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+        let userType = 'child';
+        let parentToken = null;
+        let parentId = null;
+        let childMode = false;
+        let childId = null;
+        let currentTab = 'home';
+
+        // ═══════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ═══════════════════════════════════════════════════════════════
+
+        chrome.storage.local.get(['parentToken', 'userType', 'parentId', 'childMode', 'childId'], (result) => {
+            parentToken = result.parentToken || null;
+            userType = result.userType || 'child';
+            parentId = result.parentId || null;
+            childMode = result.childMode || false;
+            childId = result.childId || null;
+
+            console.log(`🛡️  Dashboard loaded - Mode: ${userType}`);
+
+            // Determine actual user type
+            if (parentToken && parentId) {
+                userType = 'parent';
+                document.getElementById('userTypeLabel').textContent = 'Parent Mode';
+                document.getElementById('userBadge').textContent = '👨‍👩‍👧 Parent';
+                document.getElementById('userBadge').classList.add('parent');
+                setupParentDashboard();
+            } else if (childMode) {
+                userType = 'child';
+                document.getElementById('userTypeLabel').textContent = 'Child Mode';
+                document.getElementById('userBadge').textContent = '👶 Child';
+                document.getElementById('userBadge').classList.add('child');
+                setupChildDashboard();
+            } else {
+                // No auth, redirect
+                window.location.href = 'auth.html';
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // PARENT DASHBOARD
+        // ═══════════════════════════════════════════════════════════════
+
+        function setupParentDashboard() {
+            const navTabs = document.getElementById('navTabs');
+            navTabs.innerHTML = `
+                <li><button class="active" onclick="switchTab('home')">🏠 Home</button></li>
+                <li><button onclick="switchTab('children')">👶 My Children</button></li>
+                <li><button onclick="switchTab('reports')">📊 Weekly Reports</button></li>
+                <li><button onclick="switchTab('settings')">⚙️ Settings</button></li>
+            `;
+
+            const contentParent = document.getElementById('content-parent');
+            contentParent.innerHTML = `
+                <!-- Home Tab -->
+                <div id="tab-home" class="tab-content active">
+                    <h2>Welcome Back! 👋</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Children Monitored</h3>
+                            <div class="value" id="totalChildren">0</div>
+                            <div class="detail">Active devices</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>This Week</h3>
+                            <div class="value" id="weeklyVideos">0</div>
+                            <div class="detail">Videos tracked</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Duration</h3>
+                            <div class="value" id="totalDuration">0h</div>
+                            <div class="detail">Minutes watched</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Children Tab -->
+                <div id="tab-children" class="tab-content">
+                    <h2>Manage Children 👶</h2>
+                    <div style="margin-bottom: 20px;">
+                        <button onclick="showAddChildForm()">+ Add Child</button>
+                    </div>
+                    <div class="children-list" id="childrenList">
+                        <div class="empty-state">
+                            <h3>No children added yet</h3>
+                            <p>Click "Add Child" to register a child's device</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div id="tab-reports" class="tab-content">
+                    <h2>Weekly Reports 📊</h2>
+                    <div id="reportsContainer" style="max-height: 450px; overflow-y: auto;">
+                        <div class="empty-state">
+                            <p>Select a child to view weekly reports</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="tab-settings" class="tab-content">
+                    <h2>Settings ⚙️</h2>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <h3 style="margin-bottom: 15px;">Account</h3>
+                        <p><strong>Email:</strong> <span id="accountEmail"></span></p>
+                        <p><strong>Name:</strong> <span id="accountName"></span></p>
+                        <p><strong>Member Since:</strong> <span id="memberSince"></span></p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('content-parent').classList.add('active');
+            loadParentDashboard();
+        }
+
+        async function loadParentDashboard() {
+            try {
+                // Load children list
+                const response = await fetch(`${API_URL}/api/children`, {
+                    headers: {
+                        'Authorization': `Bearer ${parentToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = 'auth.html';
+                    }
+                    return;
+                }
+
+                const data = await response.json();
+                document.getElementById('totalChildren').textContent = data.count || 0;
+
+                // Display children
+                if (data.children && data.children.length > 0) {
+                    const childrenList = document.getElementById('childrenList');
+                    childrenList.innerHTML = data.children.map(child => `
+                        <div class="child-item" onclick="selectChild('${child.id}', '${child.name}')">
+                            <div class="child-name">👶 ${child.name}</div>
+                            <div class="child-status">Device: ${child.device_id}</div>
+                            <div class="child-status">Videos tracked: ${child.videos_count}</div>
+                        </div>
+                    `).join('');
+                }
+
+                // Load user info
+                chrome.storage.local.get(['parentName', 'parentEmail', 'createdAt'], (result) => {
+                    document.getElementById('accountName').textContent = result.parentName || 'Unknown';
+                    document.getElementById('accountEmail').textContent = result.parentEmail || 'Unknown';
+                    document.getElementById('memberSince').textContent = new Date().toLocaleDateString();
+                });
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function selectChild(childId, childName) {
+            try {
+                const response = await fetch(`${API_URL}/api/reports/weekly/${childId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${parentToken}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load report');
+
+                const data = await response.json();
+                const report = data.report;
+
+                const reportsContainer = document.getElementById('reportsContainer');
+                reportsContainer.innerHTML = `
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3>📊 ${childName}'s Weekly Report</h3>
+
+                        <div class="stats-grid" style="margin-top: 15px;">
+                            <div class="stat-card">
+                                <h3>Videos Watched</h3>
+                                <div class="value">${report.total_videos || 0}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Total Duration</h3>
+                                <div class="value">${report.total_duration_minutes || 0}m</div>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-top: 20px; margin-bottom: 10px;">📹 Videos Watched</h4>
+                        <div style="max-height: 250px; overflow-y: auto;">
+                            ${report.videos && report.videos.length > 0 ? `
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Duration</th>
+                                            <th>Uploader</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${report.videos.map(v => `
+                                            <tr>
+                                                <td>${v.title || 'Unknown'}</td>
+                                                <td>${v.duration ? Math.round(v.duration / 60) + 'm' : '-'}</td>
+                                                <td>${v.uploader || 'Unknown'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            ` : '<p style="color: #999;">No videos this week</p>'}
+                        </div>
+
+                        <div style="margin-top: 15px; padding: 15px; background: #f5f7fa; border-radius: 6px;">
+                            <strong>Period:</strong> ${report.week_start ? new Date(report.week_start).toLocaleDateString() : 'N/A'} - ${report.week_end ? new Date(report.week_end).toLocaleDateString() : 'N/A'}
+                        </div>
+                    </div>
+                `;
+
+                // Switch to reports tab
+                switchTab('reports');
+
+            } catch (error) {
+                console.error('Error loading child report:', error);
+                alert('Failed to load report');
+            }
+        }
+
+        function showAddChildForm() {
+            const childName = prompt('Enter child name:');
+            if (!childName) return;
+
+            const deviceId = 'child_' + Math.random().toString(36).substr(2, 9);
+
+            fetch(`${API_URL}/api/children`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${parentToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: childName,
+                    device_id: deviceId
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('✅ Child added successfully!');
+                        loadParentDashboard();
+                    }
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    alert('Failed to add child');
+                });
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // CHILD DASHBOARD
+        // ═══════════════════════════════════════════════════════════════
+
+        function setupChildDashboard() {
+            const navTabs = document.getElementById('navTabs');
+            navTabs.innerHTML = `
+                <li><button class="active" onclick="switchTab('home')">🏠 Home</button></li>
+                <li><button onclick="switchTab('filter')">🔍 Filter Settings</button></li>
+                <li><button onclick="switchTab('stats')">📊 Activity Stats</button></li>
+            `;
+
+            const contentChild = document.getElementById('content-child');
+            contentChild.innerHTML = `
+                <!-- Home Tab -->
+                <div id="tab-home" class="tab-content active">
+                    <h2>Welcome, Friend! 👋</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Videos Tracked</h3>
+                            <div class="value" id="videosTracked">0</div>
+                            <div class="detail">This week</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Watch Time</h3>
+                            <div class="value" id="watchTime">0h</div>
+                            <div class="detail">Total duration</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Filter Status</h3>
+                            <div class="value" id="filterStatus">✅</div>
+                            <div class="detail">Active</div>
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3>📝 How SafeGuard Works</h3>
+                        <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8; color: #666; font-size: 13px;">
+                            <li>🎬 Tracks videos you watch on Facebook</li>
+                            <li>🔍 Filters toxic comments automatically</li>
+                            <li>📊 Generates weekly reports for your parents</li>
+                            <li>✅ Helps keep your internet time healthy</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Filter Settings Tab -->
+                <div id="tab-filter" class="tab-content">
+                    <h2>Comment Filter 🔍</h2>
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="filterToggle" style="width: auto; margin-right: 10px;" onchange="toggleFilter()">
+                            <span>Enable Toxic Comment Filter</span>
+                        </label>
+                        <p style="margin-top: 15px; color: #666; font-size: 13px;">
+                            When enabled, comments containing toxic content will be hidden automatically. This helps keep your feed safe and positive.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Stats Tab -->
+                <div id="tab-stats" class="tab-content">
+                    <h2>Activity Stats 📊</h2>
+                    <div id="statsContainer" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <p style="color: #999;">Loading stats...</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('content-child').classList.add('active');
+            loadChildDashboard();
+        }
+
+        function loadChildDashboard() {
+            chrome.storage.local.get(['filterEnabled'], (result) => {
+                const filterToggle = document.getElementById('filterToggle');
+                if (filterToggle) {
+                    filterToggle.checked = result.filterEnabled !== false;
+                }
+            });
+
+            // Load tracking stats
+            chrome.storage.local.get(['weeklyReportCache'], (result) => {
+                if (result.weeklyReportCache) {
+                    const report = result.weeklyReportCache;
+                    document.getElementById('videosTracked').textContent = report.total_videos || 0;
+                    document.getElementById('watchTime').textContent = Math.round((report.total_duration_minutes || 0) / 60) + 'h';
+                }
+            });
+        }
+
+        function toggleFilter() {
+            const enabled = document.getElementById('filterToggle').checked;
+            chrome.storage.local.set({ filterEnabled: enabled });
+            chrome.runtime.sendMessage({ action: 'toggleFilter', enabled }, (response) => {
+                console.log(response);
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SHARED FUNCTIONS
+        // ═══════════════════════════════════════════════════════════════
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.nav-tabs button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            const tabDivs = document.querySelectorAll(`#tab-${tabName}`);
+            tabDivs.forEach(div => {
+                div.parentElement.querySelectorAll('.tab-content').forEach(el => {
+                    el.classList.remove('active');
+                });
+                div.classList.add('active');
+            });
+
+            // Highlight current tab button
+            event.target.classList.add('active');
+
+            // Update page title
+            const titles = {
+                'home': userType === 'parent' ? 'Dashboard' : 'Welcome',
+                'children': 'My Children',
+                'filter': 'Filter Settings',
+                'stats': 'Activity Stats',
+                'reports': 'Weekly Reports',
+                'settings': 'Settings'
+            };
+            document.getElementById('pageTitle').textContent = titles[tabName] || 'SafeGuard';
+        }
+
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                chrome.runtime.sendMessage({ action: 'logout' }, () => {
+                    chrome.storage.local.clear(() => {
+                        window.location.href = 'auth.html';
+                    });
+                });
+            }
+        }
+
+        console.log('🛡️  Dashboard initialized');
+    </script>
+</body>
+</html>

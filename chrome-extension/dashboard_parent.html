@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard Family - Parent Dashboard</title>
+    <style>
+        /* ════════════════════════════════════════════════════════
+           PARENT DASHBOARD STYLES
+           Shows reports, analytics, and child management
+           ════════════════════════════════════════════════════════ */
+        
+        :root {
+            --primary: #667eea;
+            --dark: #764ba2;
+            --success: #48bb78;
+            --warning: #ed8936;
+            --danger: #f56565;
+            --light: #f7fafc;
+            --border: #e2e8f0;
+            --text: #2d3748;
+            --text-light: #718096;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--light);
+            color: var(--text);
+        }
+        
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header-content h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header-content p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .header-actions button {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .header-actions button:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.success .stat-value { color: var(--success); }
+        
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.warning .stat-value { color: var(--warning); }
+        
+        /* MAIN CONTENT */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+        }
+        
+        /* CHILDREN LIST */
+        .children-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .child-item {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .child-item:hover {
+            background: white;
+            border-color: var(--primary);
+        }
+        
+        .child-item.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .child-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .child-meta {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 3px;
+        }
+        
+        .child-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 12px;
+        }
+        
+        /* REPORTS SECTION */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .select {
+            padding: 8px 12px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            cup: pointer;
+            font-family: inherit;
+        }
+        
+        .report-summary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+        
+        /* SAFETY METRICS */
+        .safety-bar {
+            background: var(--light);
+            border-radius: 6px;
+            height: 24px;
+            overflow: hidden;
+            display: flex;
+            margin: 10px 0;
+        }
+        
+        .safety-safe {
+            background: linear-gradient(90deg, var(--success) 0%, #38a169 100%);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .safety-warning {
+            background: linear-gradient(90deg, var(--warning) 0%, #d69e2e 100%);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        /* VIDEOS TABLE */
+        .videos-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .videos-table th {
+            background: var(--light);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .videos-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .videos-table tr:hover {
+            background: var(--light);
+        }
+        
+        .video-title {
+            font-weight: 600;
+            color: var(--primary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .video-title:hover {
+            text-decoration: underline;
+        }
+        
+        .status-safe {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-warning {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-blocked {
+            background: #feca57;
+            color: #d63031;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        /* BUTTONS */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--light);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        /* LOADING & MESSAGES */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            color: var(--text-light);
+        }
+        
+        .spinner {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .message.show {
+            display: block;
+        }
+        
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border-left: 4px solid var(--success);
+        }
+        
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border-left: 4px solid var(--danger);
+        }
+        
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
+            font-size: 12px;
+            border-top: 1px solid var(--border);
+            margin-top: 30px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+        
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .insights {
+            background: linear-gradient(135deg, #faf089 0%, #f8c471 100%);
+            padding: 15px;
+            border-radius: 8px;
+            color: #744210;
+            margin-top: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <!-- ════════════════════════════════════════════════════
+        MAIN DASHBOARD CONTAINER
+        Shows reports and analytics for parents
+        ════════════════════════════════════════════════════ -->
+    <div class="dashboard">
+        <!-- HEADER WITH LOGOUT BUTTON -->
+        <div class="header">
+            <div class="header-content">
+                <h1>🛡️ SafeGuard Family - Parent Dashboard</h1>
+                <p id="welcome-text">Welcome back, Parent!</p>
+            </div>
+            <div class="header-actions">
+                <button onclick="logout()">🚪 Logout</button>
+                <button onclick="refreshData()">🔄 Refresh</button>
+            </div>
+        </div>
+        
+        <!-- ERROR/SUCCESS MESSAGES -->
+        <div id="message" class="message"></div>
+        
+        <!-- STATISTICS CARDS -->
+        <div class="stats-grid" id="stats-grid">
+            <!-- Will be populated dynamically -->
+        </div>
+        
+        <!-- MAIN CONTENT: CHILDREN & REPORTS -->
+        <div class="content-grid">
+            <!-- LEFT: CHILDREN LIST -->
+            <div class="card">
+                <h2>👶 Your Children</h2>
+                <div id="children-list" class="children-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading children...
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="addNewChild()">
+                    ➕ Add New Child Device
+                </button>
+            </div>
+            
+            <!-- RIGHT: WEEKLY REPORT -->
+            <div class="card">
+                <div class="report-header">
+                    <h2>📊 Weekly Report</h2>
+                    <select class="select" id="child-select" onchange="loadReport()">
+                        <option value="">Select a child...</option>
+                    </select>
+                </div>
+                
+                <div id="report-content">
+                    <div class="empty-state">
+                        <p>📋 Select a child to view their weekly report</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>SafeGuard Family v2.1.0 | Protecting your family online | Last updated: 2026-02-08</p>
+        </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════
+        JAVASCRIPT CODE - PARENT DASHBOARD FUNCTIONALITY
+        ════════════════════════════════════════════════════ -->
+    <script src="config_extended.js"></script>
+    <script>
+        // ════════════════════════════════════════════════════
+        // STATE & CONFIGURATION
+        // ════════════════════════════════════════════════════
+        
+        let authToken = null;
+        let parentId = null;
+        let parentName = null;
+        let children = [];
+        let selectedChildId = null;
+        
+        // ════════════════════════════════════════════════════
+        // INITIALIZATION - LOAD DATA ON PAGE LOAD
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Initialize dashboard when page loads
+         * Check if user is logged in
+         * Load parent profile and children list
+         */
+        window.addEventListener('load', async () => {
+            // Get authentication token from chrome storage
+            chrome.storage.local.get(['authToken', 'parentId', 'fullName', 'userType'], (result) => {
+                if (!result.authToken || result.userType !== 'parent') {
+                    // Not logged in, redirect to auth page
+                    window.location.href = 'auth.html';
+                    return;
+                }
+                
+                authToken = result.authToken;
+                parentId = result.parentId;
+                parentName = result.fullName;
+                
+                // Update UI with parent name
+                document.getElementById('welcome-text').textContent = `Welcome back, ${parentName}!`;
+                
+                // Load data
+                loadChildren();
+                loadStats();
+            });
+        });
+        
+        // ════════════════════════════════════════════════════
+        // API REQUEST HELPER
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Make API call with authentication token
+         * @param {string} endpoint - API endpoint path
+         * @param {string} method - HTTP method (GET, POST, etc)
+         * @param {object} body - Request body for POST/PUT
+         * @returns {Promise} Response from backend
+         */
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`http://localhost:8000${endpoint}`, options);
+                const data = await response.json();
+                
+                // Check for 401 (token expired)
+                if (response.status === 401) {
+                    showMessage('Session expired. Please login again.', 'error');
+                    logout();
+                    return null;
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                showMessage('Connection error. Is backend running?', 'error');
+                return null;
+            }
+        }
+        
+        // ════════════════════════════════════════════════════
+        // LOAD CHILDREN LIST
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Fetch all children for this parent
+         * Display in left sidebar
+         * Populate child selection dropdown
+         */
+        async function loadChildren() {
+            const data = await apiCall('/api/children');
+            
+            if (!data || !data.children) {
+                showMessage('Failed to load children', 'error');
+                return;
+            }
+            
+            children = data.children;
+            
+            const childrenList = document.getElementById('children-list');
+            const childSelect = document.getElementById('child-select');
+            
+            // Clear previous content
+            childrenList.innerHTML = '';
+            childSelect.innerHTML = '<option value="">Select a child...</option>';
+            
+            if (children.length === 0) {
+                childrenList.innerHTML = `
+                    <div class="empty-state">
+                        <p>No children added yet</p>
+                        <p style="font-size: 12px; margin-top: 10px;">Click the button below to add your first child device</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Display each child
+            children.forEach(child => {
+                // Add to children list
+                const childEl = document.createElement('div');
+                childEl.className = 'child-item';
+                childEl.onclick = () => selectChild(child.id);
+                childEl.innerHTML = `
+                    <div>
+                        <div class="child-name">${child.name}</div>
+                        <div class="child-meta">${child.device_name || child.device_id}</div>
+                        <div class="child-stats">
+                            <span>📺 ${child.videos_this_week} videos this week</span>
+                            <span>✓ Active</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="deleteChild(event, '${child.id}')">Remove</button>
+                `;
+                childrenList.appendChild(childEl);
+                
+                // Add to dropdown
+                const option = document.createElement('option');
+                option.value = child.id;
+                option.textContent = child.name;
+                childSelect.appendChild(option);
+            });
+        }
+        
+        // ════════════════════════════════════════════════════
+        // SELECT CHILD & LOAD REPORT
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Select a child and load their weekly report
+         * @param {string} childId - The child to select
+         */
+        function selectChild(childId) {
+            selectedChildId = childId;
+            
+            // Update UI to show selected child
+            document.querySelectorAll('.child-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            event.target.closest('.child-item').classList.add('active');
+            
+            // Update dropdown
+            document.getElementById('child-select').value = childId;
+            
+            // Load their report
+            loadReport();
+        }
+        
+        // ════════════════════════════════════════════════════
+        // LOAD WEEKLY REPORT
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Get and display weekly report for selected child
+         * Shows videos watched, safety metrics, and AI insights
+         */
+        async function loadReport() {
+            selectedChildId = document.getElementById('child-select').value;
+            
+            if (!selectedChildId) {
+                document.getElementById('report-content').innerHTML = `
+                    <div class="empty-state">
+                        <p>📋 Select a child to view their weekly report</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('report-content').innerHTML = `
+                <div class="loading" style="display: block;">
+                    <div class="spinner"></div>
+                    Loading weekly report...
+                </div>
+            `;
+            
+            const data = await apiCall(`/api/reports/weekly/${selectedChildId}`);
+            
+            if (!data || !data.report) {
+                document.getElementById('report-content').innerHTML = `
+                    <div class="empty-state">
+                        <p>No data available yet</p>
+                        <p style="font-size: 12px;">Reports will appear once they start watching videos</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const report = data.report;
+            
+            // Build HTML for report
+            let videosHTML = '';
+            if (report.videos && report.videos.length > 0) {
+                videosHTML = '<table class="videos-table"><thead><tr><th>Title</th><th>Duration</th><th>Category</th><th>Status</th></tr></thead><tbody>';
+                
+                report.videos.forEach(video => {
+                    const statusClass = video.content_rating === 'safe' ? 'status-safe' : 'status-warning';
+                    const statusText = video.content_rating === 'safe' ? 'Safe' : 'Warning';
+                    
+                    videosHTML += `
+                        <tr>
+                            <td><a href="${video.url}" target="_blank" class="video-title">${video.title}</a></td>
+                            <td>${video.duration_minutes} min</td>
+                            <td>${video.categories.join(', ')}</td>
+                            <td><span class="${statusClass}">${statusText}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                videosHTML += '</tbody></table>';
+            }
+            
+            document.getElementById('report-content').innerHTML = `
+                <div class="report-summary">
+                    <div class="summary-row">
+                        <span>Videos Watched</span>
+                        <strong>${report.total_videos}</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Total Watch Time</span>
+                        <strong>${report.total_duration_minutes} minutes</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Average Per Video</span>
+                        <strong>${report.average_duration_minutes} minutes</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Flagged Videos</span>
+                        <strong>${report.flagged_videos}</strong>
+                    </div>
+                    <div class="summary-row" style="border-bottom: none;">
+                        <span>Comments Hidden</span>
+                        <strong>${report.comments_blocked}</strong>
+                    </div>
+                </div>
+                
+                <h3 style="margin: 20px 0 10px 0;">📹 Videos Watched</h3>
+                ${videosHTML ? videosHTML : '<p style="text-align: center; color: #718096;">No videos watched yet</p>'}
+                
+                <div class="insights">
+                    <strong>💡 Safety Summary:</strong><br>
+                    ${report.safety_summary}
+                </div>
+            `;
+        }
+        
+        // ════════════════════════════════════════════════════
+        // LOAD STATISTICS
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Load and display dashboard statistics
+         * Shows children count, videos tracked, etc
+         */
+        async function loadStats() {
+            const statsGrid = document.getElementById('stats-grid');
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">👶 Children Monitored</div>
+                    <div class="stat-value">${children.length}</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-label">📺 Videos Tracked</div>
+                    <div class="stat-value">0</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">⚠️ Content Warnings</div>
+                    <div class="stat-value">0</div>
+                </div>
+            `;
+        }
+        
+        // ════════════════════════════════════════════════════
+        // ADD NEW CHILD
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Add new child device
+         * Prompts for child name
+         */
+        function addNewChild() {
+            const childName = prompt('Enter child name/nickname:');
+            if (!childName) return;
+            
+            // Generate unique device ID
+            const deviceId = 'child_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            addChildToBackend(childName, deviceId);
+        }
+        
+        /**
+         * Send new child to backend API
+         */
+        async function addChildToBackend(name, deviceId) {
+            const data = await apiCall('/api/children', 'POST', {
+                name: name,
+                device_id: deviceId,
+                device_name: `${name}'s Device`
+            });
+            
+            if (data && data.status === 'success') {
+                showMessage(`✅ Child '${name}' added successfully!`, 'success');
+                loadChildren();
+            } else {
+                showMessage('Failed to add child', 'error');
+            }
+        }
+        
+        // ════════════════════════════════════════════════════
+        // DELETE CHILD
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Remove a child from monitoring
+         */
+        async function deleteChild(event, childId) {
+            event.stopPropagation();
+            
+            if (!confirm('Are you sure? This will delete all data for this child.')) {
+                return;
+            }
+            
+            const data = await apiCall(`/api/children/${childId}`, 'DELETE');
+            
+            if (data && data.status === 'success') {
+                showMessage('Child removed', 'success');
+                loadChildren();
+            } else {
+                showMessage('Failed to remove child', 'error');
+            }
+        }
+        
+        // ════════════════════════════════════════════════════
+        // UTILITY FUNCTIONS
+        // ════════════════════════════════════════════════════
+        
+        /**
+         * Show message to user
+         */
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message show ${type}`;
+            setTimeout(() => msg.classList.remove('show'), 5000);
+        }
+        
+        /**
+         * Refresh all data
+         */
+        function refreshData() {
+            loadChildren();
+            loadStats();
+            if (selectedChildId) loadReport();
+        }
+        
+        /**
+         * Logout user
+         */
+        function logout() {
+            chrome.storage.local.remove(['authToken', 'parentId', 'userType', 'fullName'], () => {
+                window.location.href = 'auth.html';
+            });
+        }
+    </script>
+</body>
+</html>

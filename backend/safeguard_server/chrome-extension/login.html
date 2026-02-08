@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeGuard Family - Parent Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+      background: radial-gradient(circle at top left, #f7f1ff 0%, #e6f1ff 35%, #fff2e6 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      max-width: 520px;
+      width: 100%;
+      padding: 36px;
+      border: 1px solid #edf2f7;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 18px;
+      font-size: 56px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2d3748;
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #718096;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    .info {
+      background: #f7fafc;
+      border-left: 4px solid #667eea;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #4a5568;
+      margin-bottom: 18px;
+    }
+
+    .form-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      color: #2d3748;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      transition: transform 0.2s;
+      margin-top: 6px;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+    .button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .error {
+      display: none;
+      background: #fed7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 12px;
+      color: #718096;
+    }
+
+    .footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🛡️</div>
+    <h1>Parent Dashboard Login</h1>
+    <p class="subtitle">Local-only access (no web server needed)</p>
+
+    <div class="info">
+      Use the same Parent ID/Email and password you created during extension setup.
+    </div>
+
+    <div class="error" id="errorMessage"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Parent ID / Email</label>
+        <input type="email" id="email" placeholder="parent@example.com" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Parent Password</label>
+        <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="button" id="loginButton">Login</button>
+    </form>
+
+    <div class="footer">
+      Need to create an account? <a href="parent-setup.html">Go to Setup</a>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>

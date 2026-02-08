@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeGuard Family - Parent Setup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .logo {
+      font-size: 60px;
+      margin-bottom: 15px;
+    }
+    
+    h1 {
+      color: #2d3748;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #718096;
+      font-size: 14px;
+    }
+    
+    .notice {
+      background: #fef5e7;
+      border-left: 4px solid #f39c12;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    
+    .notice-title {
+      font-weight: bold;
+      color: #d68910;
+      margin-bottom: 8px;
+    }
+    
+    .notice-text {
+      color: #7d6608;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      color: #2d3748;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .help-text {
+      font-size: 13px;
+      color: #718096;
+      margin-top: 5px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      margin: 20px 0;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      margin-right: 10px;
+      margin-top: 3px;
+    }
+    
+    .checkbox-group label {
+      margin: 0;
+      font-weight: normal;
+      font-size: 14px;
+    }
+    
+    .button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .success-message {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .error-message {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .features {
+      background: #f7fafc;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    
+    .features h3 {
+      color: #2d3748;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .features ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .features li {
+      color: #4a5568;
+      padding: 8px 0;
+      padding-left: 30px;
+      position: relative;
+    }
+    
+    .features li:before {
+      content: "✓";
+      position: absolute;
+      left: 5px;
+      color: #48bb78;
+      font-weight: bold;
+    }
+    
+    .limitations {
+      background: #fff5f5;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    
+    .limitations h3 {
+      color: #c53030;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .limitations ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .limitations li {
+      color: #742a2a;
+      padding: 8px 0;
+      padding-left: 30px;
+      position: relative;
+    }
+    
+    .limitations li:before {
+      content: "!";
+      position: absolute;
+      left: 8px;
+      color: #c53030;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🛡️</div>
+      <h1>SafeGuard Family</h1>
+      <p class="subtitle">Cloud-based account registration</p>
+    </div>
+    
+    <div class="notice">
+      <div class="notice-title">⚠️ Important: Read Before Setup</div>
+      <div class="notice-text">
+        This is a <strong>parental control system</strong>, not spyware. It monitors only visited URLs to protect children from harmful content. It does NOT log keystrokes, read messages, or capture private data. The child should be aware this extension is installed.
+      </div>
+    </div>
+    
+    <form id="setupForm">
+      <div class="form-group">
+        <label for="parentEmail">Parent Email *</label>
+        <input 
+          type="email" 
+          id="parentEmail" 
+          required 
+          placeholder="parent@example.com"
+        >
+        <div class="help-text">Used to create account and log in to parent dashboard</div>
+      </div>
+
+      <div class="form-group">
+        <label for="fullName">Your Full Name *</label>
+        <input 
+          type="text" 
+          id="fullName" 
+          required 
+          placeholder="e.g., John Doe"
+        >
+        <div class="help-text">Your name for account identity</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="parentPassword">Parent Password *</label>
+        <input 
+          type="password" 
+          id="parentPassword" 
+          required 
+          minlength="6"
+          placeholder="Minimum 6 characters"
+        >
+        <div class="help-text">Required to modify extension settings</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password *</label>
+        <input 
+          type="password" 
+          id="confirmPassword" 
+          required 
+          minlength="6"
+          placeholder="Re-enter password"
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="childName">Child's Name *</label>
+        <input 
+          type="text" 
+          id="childName" 
+          required 
+          placeholder="e.g., Sarah"
+        >
+        <div class="help-text">Used for identification in reports</div>
+      </div>
+      
+      <div class="features">
+        <h3>What This System Does:</h3>
+        <ul>
+          <li>Monitors visited URLs only (not keystrokes)</li>
+          <li>Blocks harmful websites (adult, gambling, violence)</li>
+          <li>Stores all data locally on this device</li>
+          <li>Provides a local parent dashboard for monitoring</li>
+        </ul>
+      </div>
+      
+      <div class="limitations">
+        <h3>Important Limitations:</h3>
+        <ul>
+          <li>Chrome admin can remove extension</li>
+          <li>Incognito works only if you enable it in Chrome settings</li>
+          <li>No cloud sync (data stays on this device only)</li>
+          <li>Does not monitor other browsers</li>
+          <li>Cannot block OS-level changes</li>
+        </ul>
+      </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="consentCheckbox" required>
+        <label for="consentCheckbox">
+          I consent to monitoring my child's browsing activity for safety purposes. I understand this is a transparent system and my child should be informed.
+        </label>
+      </div>
+      
+      <button type="submit" class="button" id="submitButton">
+        Complete Setup & Activate Protection
+      </button>
+    </form>
+    
+    <div class="success-message" id="successMessage">
+      ✅ Setup complete! SafeGuard Family is now active and protecting your child online.
+    </div>
+    
+    <div class="error-message" id="errorMessage"></div>
+  </div>
+  
+  <script src="config.js"></script>
+  <script src="parent-setup.js"></script>
+</body>
+</html>

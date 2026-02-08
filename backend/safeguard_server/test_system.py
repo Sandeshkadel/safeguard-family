@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-BASE_URL = 'http://192.168.254.156:5000'
+BASE_URL = 'http://192.168.254.156:3000'
 API_URL = f'{BASE_URL}/api'
 
 # Colors for output
@@ -337,10 +337,6 @@ def main():
     parent = test_parent_registration()
     if parent:
         tests_passed += 1
-    
-    # Initialize token and child_id
-    token = None
-    child_id = None
     
     # Test 4
     if parent:

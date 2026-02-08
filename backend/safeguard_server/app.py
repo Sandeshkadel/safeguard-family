@@ -4,7 +4,7 @@ SafeGuard Family - Enhanced Backend with Full Parent Controls
 Includes extension protection, data sync, and admin features
 """
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,25 +13,9 @@ import uuid
 import os
 
 # Initialize Flask
-app_dir = os.path.dirname(os.path.abspath(__file__))
-dashboard_dir = os.path.join(app_dir, 'backend', 'safeguard_server', 'chrome-extension')
-instance_dir = os.path.join(app_dir, 'instance')
-os.makedirs(instance_dir, exist_ok=True)
-
-database_url = os.environ.get('database_url', '').strip()
-if database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-if not database_url:
-    database_url = f'sqlite:///{os.path.join(instance_dir, "safeguard.db")}'
-
-app = Flask(
-    __name__,
-    instance_path=instance_dir,
-    static_folder=dashboard_dir,
-    static_url_path='/assets'
-)
+app = Flask(__name__, template_folder='templates')
 app.config['SECRET_KEY'] = 'safeguard-family-secret-2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///safeguard.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JSON_SORT_KEYS'] = False
 
@@ -80,7 +64,6 @@ class Child(db.Model):
     devices = db.relationship('Device', backref='child', lazy=True, cascade='all, delete-orphan')
     block_logs = db.relationship('BlockLog', backref='child', lazy=True, cascade='all, delete-orphan')
     history_logs = db.relationship('HistoryLog', backref='child', lazy=True, cascade='all, delete-orphan')
-    time_rules = db.relationship('SiteTimeRule', backref='child', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
@@ -217,31 +200,6 @@ class AllowlistDomain(db.Model):
         }
 
 
-class SiteTimeRule(db.Model):
-    id = db.Column(db.String(50), primary_key=True)
-    child_id = db.Column(db.String(50), db.ForeignKey('child.id'), nullable=False)
-    domain = db.Column(db.String(255), nullable=False)
-    daily_limit_minutes = db.Column(db.Integer, default=0)
-    cooldown_hours = db.Column(db.Integer, default=24)
-    permanent_block = db.Column(db.Boolean, default=False)
-    blocked_until = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'child_id': self.child_id,
-            'domain': self.domain,
-            'daily_limit_minutes': self.daily_limit_minutes,
-            'cooldown_hours': self.cooldown_hours,
-            'permanent_block': self.permanent_block,
-            'blocked_until': self.blocked_until.isoformat() if self.blocked_until else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
-
-
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════════
@@ -258,16 +216,6 @@ def verify_token(token):
         return None
     return session.parent_id
 
-def parse_iso_datetime(value):
-    if not value:
-        return None
-    try:
-        if isinstance(value, str) and value.endswith('Z'):
-            value = value.replace('Z', '+00:00')
-        return datetime.fromisoformat(value)
-    except Exception:
-        return None
-
 # ═══════════════════════════════════════════════════════════════
 # API ROUTES - AUTHENTICATION
 # ═══════════════════════════════════════════════════════════════
@@ -283,37 +231,8 @@ def health():
 
 @app.route('/', methods=['GET'])
 def index():
-    """Serve web login page on root"""
-    return send_from_directory(dashboard_dir, 'web-login.html')
-
-@app.route('/web-dashboard.html', methods=['GET'])
-def web_dashboard():
-    """Serve web dashboard"""
-    return send_from_directory(dashboard_dir, 'web-dashboard.html')
-
-@app.route('/dashboard', methods=['GET'])
-def dashboard_page():
-    """Serve web dashboard (alternative route)"""
-    return send_from_directory(dashboard_dir, 'web-dashboard.html')
-
-@app.route('/register.html', methods=['GET'])
-def register_page():
-    """Serve registration page"""
-    return send_from_directory(dashboard_dir, 'register.html')
-
-@app.route('/web-login.html', methods=['GET'])
-def login_page():
-    """Serve login page"""
-    return send_from_directory(dashboard_dir, 'web-login.html')
-
-@app.route('/assets/<path:filename>', methods=['GET'])
-def dashboard_assets(filename):
-    """Serve dashboard static assets"""
-    return send_from_directory(dashboard_dir, filename)
-
-@app.route('/api', methods=['GET'])
-def api_root():
-    """API root endpoint"""
+    """Serve parent dashboard on root"""
+    return render_template('dashboard.html')root endpoint"""
     return jsonify({
         'status': 'ok',
         'message': 'SafeGuard Family API v1.0',
@@ -323,9 +242,7 @@ def api_root():
             'devices': '/api/devices',
             'blocklist': '/api/blocklist',
             'allowlist': '/api/allowlist',
-            'logs': '/api/logs/history, /api/logs/blocked, /api/logs/block',
-            'limits': '/api/limits, /api/limits/<child_id>',
-            'usage': '/api/usage/<child_id>'
+            'logs': '/api/logs/history, /api/logs/blocked, /api/logs/block'
         }
     }), 200
 
@@ -335,17 +252,13 @@ def api_root():
 
 @app.errorhandler(404)
 def not_found(error):
-    """Handle 404 errors - return JSON for API calls, HTML for others"""
-    if request.path.startswith('/api/'):
-        return jsonify({
-            'error': 'Not Found',
-            'code': 'NOT_FOUND',
-            'message': 'The requested resource does not exist',
-            'status': 404
-        }), 404
-    else:
-        # Redirect unknown pages to login
-        return send_from_directory(dashboard_dir, 'web-login.html')
+    """Handle 404 errors - return JSON instead of HTML"""
+    return jsonify({
+        'error': 'Not Found',
+        'code': 'NOT_FOUND',
+        'message': 'The requested resource does not exist',
+        'status': 404
+    }), 404
 
 @app.errorhandler(500)
 def server_error(error):
@@ -390,7 +303,7 @@ def bad_request(error):
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
     """Serve parent dashboard"""
-    return send_from_directory(dashboard_dir, 'dashboard.html')
+    return render_template('dashboard.html')
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
@@ -847,191 +760,6 @@ def get_blocked_logs(child_id):
         return jsonify({'error': str(e), 'code': 'SERVER_ERROR'}), 500
 
 
-@app.route('/api/usage/<child_id>', methods=['GET'])
-def get_usage(child_id):
-    """Get usage summary for a child"""
-    try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        parent_id = verify_token(token)
-        if not parent_id:
-            return jsonify({'error': 'Unauthorized', 'code': 'INVALID_TOKEN'}), 401
-
-        child = Child.query.get(child_id)
-        if not child or child.parent_id != parent_id:
-            return jsonify({'error': 'Not authorized', 'code': 'FORBIDDEN'}), 403
-
-        days = request.args.get('days', 1, type=int)
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
-
-        logs = HistoryLog.query.filter(
-            HistoryLog.child_id == child_id,
-            HistoryLog.visited_at >= cutoff_date
-        ).all()
-
-        totals = {}
-        total_seconds = 0
-        for log in logs:
-            duration = int(log.duration or 0)
-            if duration <= 0:
-                continue
-            domain = (log.domain or '').lower()
-            if not domain:
-                continue
-            totals[domain] = totals.get(domain, 0) + duration
-            total_seconds += duration
-
-        usage_list = [
-            {
-                'domain': domain,
-                'seconds': seconds,
-                'minutes': round(seconds / 60, 2)
-            }
-            for domain, seconds in sorted(totals.items(), key=lambda item: item[1], reverse=True)
-        ]
-
-        return jsonify({
-            'success': True,
-            'days': days,
-            'total_seconds': total_seconds,
-            'total_minutes': round(total_seconds / 60, 2),
-            'usage': usage_list,
-            'usage_map': totals
-        }), 200
-
-    except Exception as e:
-        print(f"Get usage error: {str(e)}")
-        return jsonify({'error': str(e), 'code': 'SERVER_ERROR'}), 500
-
-
-@app.route('/api/limits/<child_id>', methods=['GET'])
-def get_time_limits(child_id):
-    """Get site time limits for a child"""
-    try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        parent_id = verify_token(token)
-        if not parent_id:
-            return jsonify({'error': 'Unauthorized', 'code': 'INVALID_TOKEN'}), 401
-
-        child = Child.query.get(child_id)
-        if not child or child.parent_id != parent_id:
-            return jsonify({'error': 'Not authorized', 'code': 'FORBIDDEN'}), 403
-
-        rules = SiteTimeRule.query.filter_by(child_id=child_id).order_by(SiteTimeRule.domain.asc()).all()
-
-        return jsonify({
-            'success': True,
-            'limits': [rule.to_dict() for rule in rules],
-            'count': len(rules)
-        }), 200
-
-    except Exception as e:
-        print(f"Get limits error: {str(e)}")
-        return jsonify({'error': str(e), 'code': 'SERVER_ERROR'}), 500
-
-
-@app.route('/api/limits', methods=['POST'])
-def upsert_time_limit():
-    """Create or update a site time limit"""
-    try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        parent_id = verify_token(token)
-        if not parent_id:
-            return jsonify({'error': 'Unauthorized', 'code': 'INVALID_TOKEN'}), 401
-
-        data = request.get_json()
-        child_id = data.get('child_id')
-        domain = (data.get('domain') or '').strip().lower()
-        daily_limit_minutes = data.get('daily_limit_minutes', 0)
-        cooldown_hours = data.get('cooldown_hours', 24)
-        permanent_block = bool(data.get('permanent_block', False))
-        blocked_until_value = data.get('blocked_until')
-
-        if not child_id or not domain:
-            return jsonify({'error': 'Child ID and domain required', 'code': 'MISSING_FIELDS'}), 400
-
-        child = Child.query.get(child_id)
-        if not child or child.parent_id != parent_id:
-            return jsonify({'error': 'Not authorized', 'code': 'FORBIDDEN'}), 403
-
-        try:
-            daily_limit_minutes = int(daily_limit_minutes or 0)
-            cooldown_hours = int(cooldown_hours or 24)
-        except ValueError:
-            return jsonify({'error': 'Invalid limit values', 'code': 'INVALID_FIELDS'}), 400
-
-        blocked_until = parse_iso_datetime(blocked_until_value)
-        if permanent_block:
-            blocked_until = None
-
-        rule = SiteTimeRule.query.filter_by(child_id=child_id, domain=domain).first()
-        if rule:
-            rule.daily_limit_minutes = daily_limit_minutes
-            rule.cooldown_hours = cooldown_hours
-            rule.permanent_block = permanent_block
-            rule.blocked_until = blocked_until
-            rule.updated_at = datetime.utcnow()
-            db.session.commit()
-            return jsonify({
-                'success': True,
-                'message': 'Limit updated',
-                'limit': rule.to_dict()
-            }), 200
-
-        rule = SiteTimeRule(
-            id=generate_id(),
-            child_id=child_id,
-            domain=domain,
-            daily_limit_minutes=daily_limit_minutes,
-            cooldown_hours=cooldown_hours,
-            permanent_block=permanent_block,
-            blocked_until=blocked_until
-        )
-        db.session.add(rule)
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': 'Limit created',
-            'limit': rule.to_dict()
-        }), 201
-
-    except Exception as e:
-        db.session.rollback()
-        print(f"Upsert limit error: {str(e)}")
-        return jsonify({'error': str(e), 'code': 'SERVER_ERROR'}), 500
-
-
-@app.route('/api/limits/<rule_id>', methods=['DELETE'])
-def delete_time_limit(rule_id):
-    """Delete a site time limit"""
-    try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        parent_id = verify_token(token)
-        if not parent_id:
-            return jsonify({'error': 'Unauthorized', 'code': 'INVALID_TOKEN'}), 401
-
-        rule = SiteTimeRule.query.get(rule_id)
-        if not rule:
-            return jsonify({'error': 'Not found', 'code': 'NOT_FOUND'}), 404
-
-        child = Child.query.get(rule.child_id)
-        if not child or child.parent_id != parent_id:
-            return jsonify({'error': 'Not authorized', 'code': 'FORBIDDEN'}), 403
-
-        db.session.delete(rule)
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': 'Limit removed'
-        }), 200
-
-    except Exception as e:
-        db.session.rollback()
-        print(f"Delete limit error: {str(e)}")
-        return jsonify({'error': str(e), 'code': 'SERVER_ERROR'}), 500
-
-
 # ═══════════════════════════════════════════════════════════════
 # API ROUTES - BLOCKLIST / ALLOWLIST
 # ═══════════════════════════════════════════════════════════════
@@ -1148,24 +876,14 @@ if __name__ == '__main__':
         db.create_all()
         print("✅ Database tables created")
     
-    print("\n" + "="*70)
-    print("🚀 SafeGuard Backend Server Starting...")
-    print("="*70)
-    print("\n📱 Local Access (same device):")
-    print("   🔗 Dashboard: http://localhost:5000")
-    print("   🔗 API: http://localhost:5000/api")
-    print("\n🌐 Network Access (from other devices):")
-    print("   Replace 'localhost' with your computer IP address")
-    print("   Example: http://192.168.1.X:5000")
-    print("\n💾 Database: instance/safeguard.db (local file)")
-    print("="*70)
-    print("\n⌨️  Press Ctrl+C to stop the server\n")
-    
-    app.run(
-        host='0.0.0.0',
-        port=5000,
-        debug=True,
-        use_reloader=True
-    )
+    print("\n🚀 SafeGuard Backend Server Starting...")
+    print("=" * 70)
+    print("📋 Server: http://192.168.1.75:3000")
+    print("📊 Dashboard: http://192.168.1.75:3000/dashboard")
+    print("🔧 API: http://192.168.1.75:3000/api")
+    print("\n🌐 Access from ANY device on your network:")
+    print("   http://192.168.1.75:3000/dashboard")
+    print("=" * 70)
+    print("\nPress Ctrl+C to stop the server\n")
     
     app.run(debug=True, host='0.0.0.0', port=3000, use_reloader=False)

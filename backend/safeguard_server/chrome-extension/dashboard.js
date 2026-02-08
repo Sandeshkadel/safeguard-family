@@ -81,7 +81,6 @@ function bindActions() {
   });
 
   document.getElementById('refreshOverview').addEventListener('click', refreshAll);
-  document.getElementById('refreshUsage').addEventListener('click', loadUsageAndLimits);
 
   document.getElementById('openExtensions').addEventListener('click', () => {
     chrome.tabs.create({ url: 'chrome://extensions/?id=' + chrome.runtime.id });
@@ -89,7 +88,6 @@ function bindActions() {
 
   document.getElementById('addBlock').addEventListener('click', addBlocklistItem);
   document.getElementById('addAllow').addEventListener('click', addAllowlistItem);
-  document.getElementById('addLimit').addEventListener('click', saveTimeLimit);
 
   document.getElementById('saveSettings').addEventListener('click', saveSettings);
   document.getElementById('clearAllData').addEventListener('click', clearAllData);
@@ -149,7 +147,6 @@ async function refreshAll() {
   
   renderLists(blockedDomains, allowedDomains);
   loadSettings(data[STORAGE_KEYS.settings] || DEFAULT_SETTINGS);
-  await loadUsageAndLimits();
 }
 
 function updateStats(blockedLog, historyLog) {
@@ -400,157 +397,6 @@ async function clearHistory() {
   await refreshAll();
 }
 
-async function loadUsageAndLimits() {
-  const childId = await getStorageValue('childId');
-  if (!childId) return;
-
-  try {
-    const [usageRes, limitsRes] = await Promise.all([
-      apiCall('GET', `/api/usage/${childId}?days=1`, {}),
-      apiCall('GET', `/api/limits/${childId}`, {})
-    ]);
-
-    const usage = usageRes.usage || [];
-    const limits = limitsRes.limits || [];
-
-    renderUsageSummary(usageRes, usage);
-    renderUsageTable(usage, limits);
-    renderLimitsList(limits);
-  } catch (error) {
-    console.warn('Usage/limits load failed:', error);
-  }
-}
-
-function renderUsageSummary(usageRes, usage) {
-  const totalSeconds = usageRes.total_seconds || 0;
-  const topSite = usage.length ? usage[0].domain : '-';
-
-  document.getElementById('totalTimeToday').textContent = formatDuration(totalSeconds);
-  document.getElementById('topSiteToday').textContent = topSite;
-  document.getElementById('sitesUsedToday').textContent = usage.length;
-}
-
-function renderUsageTable(usage, limits) {
-  const container = document.getElementById('usageTable');
-  if (!usage.length) {
-    container.innerHTML = emptyRow('No usage recorded yet.');
-    return;
-  }
-
-  const rows = usage.map(item => {
-    const limit = findLimitForDomain(item.domain, limits);
-    const limitMinutes = limit ? limit.daily_limit_minutes : 0;
-    const limitText = limit ? (limit.permanent_block ? 'Permanent' : `${limitMinutes}m`) : '-';
-    const status = getLimitStatus(item.seconds, limit);
-    return `
-      <div class="table-row">
-        <div>${escapeHtml(item.domain)}</div>
-        <div>${formatDuration(item.seconds)}</div>
-        <div>${limitText}</div>
-        <div>${status}</div>
-      </div>
-    `;
-  }).join('');
-
-  container.innerHTML = rows;
-}
-
-function renderLimitsList(limits) {
-  const container = document.getElementById('limitsList');
-  if (!limits.length) {
-    container.innerHTML = '<div class="list-item">No time limits yet.</div>';
-    return;
-  }
-
-  container.innerHTML = limits.map(rule => {
-    const label = rule.permanent_block
-      ? 'Permanent block'
-      : `${rule.daily_limit_minutes || 0} minutes per day`;
-    const cooldown = rule.blocked_until ? `Blocked until ${formatDate(rule.blocked_until)}` : 'Active';
-    return `
-      <div class="list-item">
-        <div>
-          <strong>${escapeHtml(rule.domain)}</strong>
-          <div class="small">${label} · ${cooldown}</div>
-        </div>
-        <button class="btn btn-ghost" data-limit-id="${rule.id}">Remove</button>
-      </div>
-    `;
-  }).join('');
-
-  container.querySelectorAll('[data-limit-id]').forEach(btn => {
-    btn.addEventListener('click', () => removeTimeLimit(btn.dataset.limitId));
-  });
-}
-
-async function saveTimeLimit() {
-  const domainInput = document.getElementById('limitDomain');
-  const minutesInput = document.getElementById('limitMinutes');
-  const permanentToggle = document.getElementById('limitPermanent');
-
-  const domain = normalizeDomain(domainInput.value);
-  if (!domain) return;
-
-  const minutes = parseInt(minutesInput.value || '0', 10);
-  const permanent = permanentToggle.checked;
-
-  const childId = await getStorageValue('childId');
-  if (!childId) {
-    alert('Child ID not found. Please logout and login again.');
-    return;
-  }
-
-  try {
-    await apiCall('POST', '/api/limits', {
-      child_id: childId,
-      domain,
-      daily_limit_minutes: permanent ? 0 : Math.max(0, minutes),
-      cooldown_hours: 24,
-      permanent_block: permanent
-    });
-
-    domainInput.value = '';
-    minutesInput.value = '';
-    permanentToggle.checked = false;
-    await loadUsageAndLimits();
-    alert(`✅ Time rule saved for ${domain}`);
-  } catch (error) {
-    console.error('Error saving time limit:', error);
-    alert(`❌ Error: ${error.message}`);
-  }
-}
-
-async function removeTimeLimit(limitId) {
-  if (!confirm('Remove this time limit?')) return;
-  try {
-    await apiCall('DELETE', `/api/limits/${limitId}`, {});
-    await loadUsageAndLimits();
-  } catch (error) {
-    console.error('Error removing time limit:', error);
-    alert(`❌ Error: ${error.message}`);
-  }
-}
-
-function getLimitStatus(usedSeconds, rule) {
-  if (!rule) return 'No limit';
-  if (rule.permanent_block) return 'Permanent';
-  if (rule.blocked_until && new Date(rule.blocked_until).getTime() > Date.now()) return 'Cooldown';
-  const limitSeconds = (rule.daily_limit_minutes || 0) * 60;
-  if (limitSeconds > 0 && usedSeconds >= limitSeconds) return 'Limit reached';
-  return 'Active';
-}
-
-function findLimitForDomain(domain, limits) {
-  return limits.find(rule => domainMatches(domain, rule.domain));
-}
-
-function domainMatches(domain, pattern) {
-  if (!domain || !pattern) return false;
-  const cleanDomain = domain.toLowerCase();
-  const cleanPattern = pattern.toLowerCase().replace('www.', '');
-  return cleanDomain === cleanPattern || cleanDomain.endsWith('.' + cleanPattern);
-}
-
 async function clearAllData() {
   if (!confirm('This will delete all SafeGuard data and require setup again. Continue?')) return;
   await chrome.storage.local.clear();
@@ -586,17 +432,6 @@ function normalizeDomain(value) {
 
 function formatDate(ts) {
   return new Date(ts).toLocaleString();
-}
-
-function formatDuration(seconds) {
-  const totalSeconds = Math.max(0, Math.round(seconds || 0));
-  const minutes = Math.floor(totalSeconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (hours > 0) {
-    return `${hours}h ${remainingMinutes}m`;
-  }
-  return `${minutes}m`;
 }
 
 function escapeHtml(str) {

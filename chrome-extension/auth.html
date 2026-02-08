@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard - Parent Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .toggle-form p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .toggle-form button {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 0;
+            margin-left: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .message.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            font-size: 13px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 2px solid #f0f0f0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .role-badge {
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .role-badge.child {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .role-badge.parent {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ SafeGuard</h1>
+            <p>Family Content Protection</p>
+        </div>
+
+        <div class="content">
+            <div id="message"></div>
+
+            <!-- Parent Login/Register Form -->
+            <div id="parentForm">
+                <h2 id="parentTitle" style="font-size: 20px; margin-bottom: 20px; color: #333;">Parent Login</h2>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="parent@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+
+                <div id="nameGroup" class="form-group hidden">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" placeholder="Your Name" required>
+                </div>
+
+                <div id="childGroup" class="form-group hidden">
+                    <label for="childName">Child Name</label>
+                    <input type="text" id="childName" placeholder="Child's Name" required>
+                </div>
+
+                <div class="loading" id="loading">
+                    <span class="spinner"></span>
+                    <span>Processing...</span>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" id="submitBtn" onclick="handleParentAuth()">Login</button>
+                    <button class="btn-secondary" onclick="toggleForm()">Register</button>
+                </div>
+
+                <div class="toggle-form">
+                    <p>
+                        <span id="toggleText">Don't have an account?</span>
+                        <button onclick="toggleForm()">
+                            <span id="toggleLink">Register here</span>
+                        </button>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Child Quick Access -->
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee;">
+                <p style="font-size: 13px; color: #999; text-align: center; margin-bottom: 15px;">
+                    👶 Child using this device?
+                </p>
+                <button class="btn-secondary" style="width: 100%;" onclick="accessAsChild()">
+                    Continue as Child
+                </button>
+                <p class="role-badge child" style="display: block; text-align: center; margin-top: 10px;">
+                    📱 Direct Access Mode
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+        let isLoginMode = true;
+
+        // Check if already logged in
+        chrome.storage.local.get(['parentToken', 'childMode'], (result) => {
+            if (result.parentToken || result.childMode) {
+                // Already logged in, open dashboard
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        function showMessage(text, type = 'error') {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = text;
+            msgEl.className = `message ${type}`;
+            msgEl.style.display = 'block';
+        }
+
+        function setLoading(active) {
+            document.getElementById('loading').classList.toggle('active', active);
+            document.getElementById('submitBtn').disabled = active;
+        }
+
+        function toggleForm() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('parentTitle');
+            const submitBtn = document.getElementById('submitBtn');
+            const nameGroup = document.getElementById('nameGroup');
+            const toggleText = document.getElementById('toggleText');
+            const toggleLink = document.getElementById('toggleLink');
+
+            if (isLoginMode) {
+                title.textContent = 'Parent Login';
+                submitBtn.textContent = 'Login';
+                nameGroup.classList.add('hidden');
+                toggleText.textContent = "Don't have an account?";
+                toggleLink.textContent = 'Register here';
+            } else {
+                title.textContent = 'Parent Registration';
+                submitBtn.textContent = 'Create Account';
+                nameGroup.classList.remove('hidden');
+                toggleText.textContent = 'Already have an account?';
+                toggleLink.textContent = 'Login here';
+            }
+
+            document.getElementById('message').innerHTML = '';
+        }
+
+        async function handleParentAuth() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!email || !password) {
+                showMessage('Please fill in all fields');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+                const payload = {
+                    email,
+                    password
+                };
+
+                if (!isLoginMode) {
+                    const fullName = document.getElementById('fullName').value.trim();
+                    if (!fullName) {
+                        showMessage('Please enter your full name');
+                        setLoading(false);
+                        return;
+                    }
+                    payload.full_name = fullName;
+                }
+
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.detail || 'Authentication failed');
+                    setLoading(false);
+                    return;
+                }
+
+                // Store token and user info
+                chrome.storage.local.set({
+                    parentToken: data.token,
+                    parentId: data.parent.id,
+                    parentEmail: data.parent.email,
+                    parentName: data.parent.full_name,
+                    userType: 'parent'
+                }, () => {
+                    showMessage('✅ Authentication successful!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                });
+
+            } catch (error) {
+                console.error('Auth error:', error);
+                showMessage('Connection error. Is the backend running?');
+                setLoading(false);
+            }
+        }
+
+        function accessAsChild() {
+            // Store child mode flag
+            chrome.storage.local.set({
+                childMode: true,
+                userType: 'child'
+            }, () => {
+                window.location.href = 'dashboard.html';
+            });
+        }
+
+        // Enter key to submit
+        document.getElementById('email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleParentAuth();
+        });
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleParentAuth();
+        });
+    </script>
+</body>
+</html>

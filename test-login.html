@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Login</title>
+  <style>
+    body { font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto; }
+    .status { padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .success { background: #c6f6d5; border: 2px solid #48bb78; color: #22543d; }
+    .error { background: #fed7d7; border: 2px solid #fc8181; color: #c53030; }
+    button { padding: 15px 30px; font-size: 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #5568d3; }
+    pre { background: #f7fafc; padding: 15px; border-radius: 8px; overflow-x: auto; }
+    h1 { color: #2d3748; }
+  </style>
+</head>
+<body>
+  <h1>🔐 Test Login</h1>
+  <p>Testing login for: <strong>sandeshkadel2314@gmail.com</strong></p>
+  
+  <button onclick="testLogin()">Test Login Now</button>
+  
+  <div id="result"></div>
+
+  <script>
+    async function testLogin() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '<div class="status">Testing login...</div>';
+
+      try {
+        const response = await fetch('http://192.168.254.156:5000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'sandeshkadel2314@gmail.com',
+            password: 'Sandesh@123'
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          resultDiv.innerHTML = `
+            <div class="status success">
+              <h2>✅ LOGIN SUCCESSFUL!</h2>
+              <p><strong>Email:</strong> ${data.email}</p>
+              <p><strong>Parent ID:</strong> ${data.parent_id}</p>
+              <p><strong>Token:</strong> ${data.token.substring(0, 30)}...</p>
+              <hr>
+              <p><strong>✓ Your account works perfectly!</strong></p>
+              <p><a href="http://192.168.254.156:5000" style="color: #667eea; font-weight: bold;">→ Go to Dashboard</a></p>
+            </div>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="status error">
+              <h2>❌ LOGIN FAILED</h2>
+              <p><strong>Error:</strong> ${data.error || 'Unknown error'}</p>
+            </div>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="status error">
+            <h2>❌ CONNECTION ERROR</h2>
+            <p><strong>Error:</strong> ${error.message}</p>
+            <p>Make sure the server is running at http://192.168.254.156:5000</p>
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

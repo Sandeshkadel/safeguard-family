@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard - Child Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .content {
+            background: white;
+            padding: 20px;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box h3 {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .stat-box .number {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .stat-box .unit {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section h2 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-card {
+            background: #f5f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .filter-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 24px;
+            background: #ddd;
+            border-radius: 12px;
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4caf50;
+        }
+
+        .toggle-slider {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 28px;
+        }
+
+        .filter-description {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .videos-section {
+            background: #f5f7fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .video-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #667eea;
+        }
+
+        .video-info {
+            flex: 1;
+        }
+
+        .video-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .video-details {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .video-duration {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .info-banner {
+            background: #e3f2fd;
+            border-left: 4px solid #1976d2;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .info-banner h3 {
+            color: #1976d2;
+            font-size: 13px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .info-banner p {
+            color: #0d47a1;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .info-banner ul {
+            margin-left: 20px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #0d47a1;
+        }
+
+        .info-banner li {
+            margin-bottom: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .empty-state h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 12px;
+        }
+
+        .progress-section {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .heart {
+            color: #ff6b9d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🛡️ SafeGuard</h1>
+            <p>Your Safe Browsing Companion</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Info Banner -->
+            <div class="info-banner">
+                <h3>✅ How SafeGuard Helps You</h3>
+                <p>We're here to make your internet time safer and healthier!</p>
+                <ul>
+                    <li>🎬 Tracks interesting videos you watch</li>
+                    <li>🔍 Automatically hides mean or rude comments</li>
+                    <li>📊 Helps your parents understand what you like</li>
+                    <li>✅ Makes sure you have balanced screen time</li>
+                </ul>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-section">
+                <div class="stat-box">
+                    <h3>Videos This Week</h3>
+                    <div class="number" id="videosCount">0</div>
+                    <div class="unit">watched</div>
+                </div>
+                <div class="stat-box">
+                    <h3>Total Time</h3>
+                    <div class="number" id="totalTime">0h</div>
+                    <div class="unit">minutes</div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="section">
+                <h2>🔍 Safety Filter</h2>
+                <div class="filter-card">
+                    <div class="filter-toggle" onclick="toggleFilter()">
+                        <div class="toggle-switch" id="filterToggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span id="filterStatus">Enable Comment Filter</span>
+                    </div>
+                    <div class="filter-description">
+                        👿 Hides mean, rude, or toxic comments from other users. Keeps your Facebook feed clean and positive!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                ✅ Changes saved successfully!
+            </div>
+
+            <!-- Recent Videos Section -->
+            <div class="section">
+                <h2>📹 Your Activity</h2>
+                <div class="videos-section">
+                    <div id="videosContainer">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📺</div>
+                            <h3>No videos tracked yet</h3>
+                            <p>Your videos will show up here as you watch them on Facebook!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="section">
+                <h2>📅 Weekly Progress</h2>
+                <div class="progress-section">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; color: #666;">Screen Time Health</span>
+                        <span style="font-size: 13px; color: #667eea; font-weight: 600;" id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">
+                        Keep up the healthy balance! <span id="progressHint">Start watching to see your weekly trend</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips Section -->
+            <div class="section">
+                <h2>💡 Healthy Habits Tip</h2>
+                <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; border-radius: 6px;">
+                    <p style="font-size: 13px; color: #e65100; line-height: 1.6;">
+                        Take a break every 30 minutes! Stand up, stretch, and rest your eyes. Your future self will thank you! 👀
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            Made with <span class="heart">❤️</span> to keep you and your family safe
+        </footer>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        // ═══════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ═══════════════════════════════════════════════════════════════
+
+        chrome.storage.local.get(['filterEnabled', 'weeklyReportCache'], (result) => {
+            const filterEnabled = result.filterEnabled !== false;
+            updateFilterToggle(filterEnabled);
+
+            if (result.weeklyReportCache) {
+                const report = result.weeklyReportCache;
+                document.getElementById('videosCount').textContent = report.total_videos || 0;
+                document.getElementById('totalTime').textContent = Math.round((report.total_duration_minutes || 0) / 60) + 'h';
+
+                // Update progress
+                const percent = Math.min(100, (report.total_duration_minutes || 0) / 2); // Assume 120 min = 100%
+                document.getElementById('progressPercent').textContent = percent.toFixed(0) + '%';
+                document.getElementById('progressFill').style.width = percent + '%';
+
+                if (report.videos && report.videos.length > 0) {
+                    renderVideos(report.videos);
+                }
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // FILTER TOGGLE
+        // ═══════════════════════════════════════════════════════════════
+
+        function updateFilterToggle(enabled) {
+            const toggle = document.getElementById('filterToggle');
+            const status = document.getElementById('filterStatus');
+
+            if (enabled) {
+                toggle.classList.add('active');
+                status.textContent = '✅ Comment Filter: ON';
+            } else {
+                toggle.classList.remove('active');
+                status.textContent = '❌ Comment Filter: OFF';
+            }
+        }
+
+        function toggleFilter() {
+            chrome.storage.local.get(['filterEnabled'], (result) => {
+                const newState = !(result.filterEnabled !== false);
+                chrome.storage.local.set({ filterEnabled: newState }, () => {
+                    updateFilterToggle(newState);
+                    showSuccessMessage();
+
+                    // Send message to background to update
+                    chrome.runtime.sendMessage({
+                        action: 'toggleFilter',
+                        enabled: newState
+                    }).catch(() => {});
+                });
+            });
+        }
+
+        function showSuccessMessage() {
+            const msg = document.getElementById('successMessage');
+            msg.classList.add('show');
+            setTimeout(() => {
+                msg.classList.remove('show');
+            }, 3000);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // RENDER VIDEOS
+        // ═══════════════════════════════════════════════════════════════
+
+        function renderVideos(videos) {
+            const container = document.getElementById('videosContainer');
+
+            if (!videos || videos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📺</div>
+                        <h3>No videos tracked yet</h3>
+                        <p>Your videos will show up here as you watch them on Facebook!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = videos.slice(0, 5).map(video => `
+                <div class="video-item">
+                    <div class="video-info">
+                        <div class="video-title">${video.title || 'Unknown Video'}</div>
+                        <div class="video-details">
+                            by ${video.uploader || 'Unknown'} •
+                            ${new Date(video.analyzed_at).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div class="video-duration">
+                        ${video.duration ? Math.round(video.duration / 60) + 'min' : '-'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load data
+        loadActivityData();
+
+        async function loadActivityData() {
+            try {
+                chrome.storage.local.get(['weeklyReportCache'], (result) => {
+                    if (result.weeklyReportCache && result.weeklyReportCache.videos) {
+                        renderVideos(result.weeklyReportCache.videos);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading activity:', error);
+            }
+        }
+
+        console.log('👶 Child Dashboard Loaded');
+    </script>
+</body>
+</html>
